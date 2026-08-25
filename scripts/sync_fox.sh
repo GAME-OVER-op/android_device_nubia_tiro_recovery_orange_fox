@@ -26,6 +26,17 @@ git -C "$SYNC_DIR" checkout --detach "$FOX_SYNC_REV"
 
 echo "OrangeFox sync helper revision: $(git -C "$SYNC_DIR" rev-parse HEAD)"
 
+# Fail early with a useful diagnostic if the pinned upstream revision is
+# incomplete or changes its layout in the future.
+for required in \
+  orangefox_sync.sh \
+  patches/patch-manifest-fox_12.1.diff; do
+  if [[ ! -f "$SYNC_DIR/$required" ]]; then
+    echo "ERROR: pinned OrangeFox sync helper is missing: $required" >&2
+    exit 1
+  fi
+done
+
 retry() {
   local max="$1"; shift
   local attempt=1
@@ -40,10 +51,21 @@ retry() {
   done
 }
 
+run_official_sync_helper() {
+  # IMPORTANT: OrangeFox's helper resolves its bundled patches relative to
+  # $PWD (BASE_DIR="$PWD"), not relative to the script file itself. Always run
+  # it from the root of the cloned sync repository or it will look for files
+  # such as patches/patch-manifest-fox_12.1.diff in the caller's directory.
+  (
+    cd "$SYNC_DIR"
+    ./orangefox_sync.sh --branch 12.1 --path "$FOX_SRC"
+  )
+}
+
 if [[ ! -d "$FOX_SRC/.repo" ]]; then
   # The official helper is explicitly designed to be rerun if a network sync is
   # interrupted, so use a small retry budget for GitHub-hosted runners.
-  retry 3 "$SYNC_DIR/orangefox_sync.sh" --branch 12.1 --path "$FOX_SRC"
+  retry 3 run_official_sync_helper
 else
   cd "$FOX_SRC"
   retry 3 repo sync --force-sync -c -j"$SYNC_JOBS" --no-clone-bundle --no-tags

@@ -66,3 +66,16 @@ loaded. Do not blindly insert modules built against a different kernel ABI.
 Do not replace the compatibility KeyMint/Gatekeeper/QSEE blobs first. Compare
 the final recovery root against `reference/recovery-root.sha256` and confirm
 that `prepdecrypt.sh`, QSEE, KeyMint and Gatekeeper services are present.
+
+## OrangeFox sync says `patch-manifest-fox_12.1.diff` is missing
+
+The official OrangeFox sync helper resolves its bundled patch directory from
+the process working directory (`$PWD`). It must therefore be executed from the
+root of the cloned `OrangeFox/sync` repository.
+
+This repository's `scripts/sync_fox.sh` already does that. If an older checkout
+shows a path like `<your-repository>/patches/patch-manifest-fox_12.1.diff`, update
+`scripts/sync_fox.sh` or run the helper from inside `orangefox-sync/`. Do not copy
+the upstream patch into the device-tree `patches/` directory; that only masks
+the incorrect working directory.
+
