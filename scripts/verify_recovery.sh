@@ -44,4 +44,26 @@ if [[ -n "$PRODUCT_OUT" ]]; then
     [[ -e "$PRODUCT_OUT/$f" ]] || { echo "ERROR: missing build output: $f" >&2; exit 1; }
   done
   echo "Decrypt stack check: required compatibility files are present"
+
+  PROP="$PRODUCT_OUT/recovery/root/default.prop"
+  [[ -f "$PROP" ]] || PROP="$PRODUCT_OUT/recovery/root/prop.default"
+  if [[ ! -f "$PROP" ]]; then
+    echo "ERROR: built recovery default properties not found" >&2
+    exit 1
+  fi
+
+  prop_value() {
+    sed -n "s/^$1=//p" "$PROP" | tail -n1
+  }
+  SDK="$(prop_value ro.build.version.sdk)"
+  FIRST_API="$(prop_value ro.product.first_api_level)"
+  BOARD_FIRST_API="$(prop_value ro.board.first_api_level)"
+  if [[ "$SDK" != "34" || "$FIRST_API" != "34" || "$BOARD_FIRST_API" != "34" ]]; then
+    echo "ERROR: built ramdisk does not match known-good Android 14/API34 profile" >&2
+    echo "  ro.build.version.sdk=$SDK" >&2
+    echo "  ro.product.first_api_level=$FIRST_API" >&2
+    echo "  ro.board.first_api_level=$BOARD_FIRST_API" >&2
+    exit 1
+  fi
+  echo "Runtime profile check: SDK 34 / first API 34 / board first API 34"
 fi

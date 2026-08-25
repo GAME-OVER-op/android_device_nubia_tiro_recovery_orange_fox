@@ -37,6 +37,7 @@ for rel in [
     "reference/source-recovery-root.sha256",
     "reference/SPLIT_IMAGE_LAYOUT.txt",
     "reference/WORKING_DECRYPT_STACK.txt",
+    "reference/KNOWN_GOOD_RUNTIME_PROFILE.txt",
 ]:
     if not (ROOT / rel).is_file():
         errors.append(f"missing: {rel}")
@@ -56,12 +57,81 @@ checks = {
     "BOARD_RECOVERYIMAGE_PARTITION_SIZE": "104857600",
     "BOARD_EXCLUDE_KERNEL_FROM_RECOVERY_IMAGE": "true",
     "BOARD_RAMDISK_USE_LZ4": "true",
-    "BOARD_SUPER_PARTITION_SIZE": "12884901888",
-    "BOARD_QTI_DYNAMIC_PARTITIONS_SIZE": "12880707584",
+    "BOARD_SUPER_PARTITION_SIZE": "11811160064",
+    "BOARD_QTI_DYNAMIC_PARTITIONS_SIZE": "11809841488",
 }
 for key, value in checks.items():
     if key not in board or value not in board:
         errors.append(f"expected {key}={value}")
+
+# AOSP/OrangeFox envsetup is intentionally interactive-shell oriented: it is
+# not nounset-safe and can return 1 from a harmless final optional probe. CI and
+# local builds must therefore disable -u for Android shell functions and disable
+# -e only around the source command, then restore -e and validate the environment.
+workflow = (ROOT / ".github/workflows/build-recovery.yml").read_text()
+local_build = (ROOT / "scripts/build_local.sh").read_text()
+for label, text in (("GitHub workflow", workflow), ("local build script", local_build)):
+    source_at = text.find("source build/envsetup.sh")
+    if source_at < 0:
+        errors.append(f"{label}: missing build/envsetup.sh source")
+        continue
+    prior = text[max(0, source_at - 1200):source_at]
+    after = text[source_at:source_at + 1800]
+    if "set +u" not in prior:
+        errors.append(f"{label}: must disable bash nounset before envsetup.sh")
+    if "set +e" not in prior:
+        errors.append(f"{label}: must temporarily disable bash errexit before envsetup.sh")
+    if "ENVSETUP_RC=$?" not in after:
+        errors.append(f"{label}: must capture envsetup return code")
+    if "set -e" not in after:
+        errors.append(f"{label}: must restore bash errexit after envsetup.sh")
+    if "declare -F lunch" not in after or "declare -F mka" not in after:
+        errors.append(f"{label}: must validate lunch/mka after envsetup.sh")
+    if "RESOLVED_TOP=" not in after or "gettop" not in after:
+        errors.append(f"{label}: must validate Android top after envsetup.sh")
+
+
+# OrangeFox accepts FOX_MAINTAINER_PATCH_VERSION only as a canonical
+# decimal whole number. CI must never feed a Git SHA into this field.
+if 'export TIRO_BUILD_VERSION="${GITHUB_RUN_NUMBER}"' not in workflow:
+    errors.append("GitHub workflow must use numeric GITHUB_RUN_NUMBER for TIRO_BUILD_VERSION")
+if 'export TIRO_BUILD_VERSION="${GITHUB_SHA::8}"' in workflow:
+    errors.append("GitHub workflow must not use hexadecimal Git SHA as OrangeFox patch version")
+if 'export TIRO_BUILD_VERSION="${TIRO_BUILD_VERSION:-0}"' not in local_build:
+    errors.append("local build must default TIRO_BUILD_VERSION to numeric 0")
+vendorsetup = (D / "vendorsetup.sh").read_text()
+if 'export FOX_MAINTAINER_PATCH_VERSION="$TIRO_PATCH_VERSION"' not in vendorsetup:
+    errors.append("vendorsetup must export normalized numeric FOX_MAINTAINER_PATCH_VERSION")
+if 'TIRO_BUILD_VERSION:-local' in vendorsetup or 'FOX_MAINTAINER_PATCH_VERSION="${TIRO_BUILD_VERSION:-local}"' in vendorsetup:
+    errors.append("vendorsetup contains non-numeric local patch-version fallback")
+
+# The known-good reference recovery was built on the Android 14 / SDK 34
+# OrangeFox line. Its ramdisk explicitly reports ro.build.version.sdk=34,
+# ro.product.first_api_level=34 and ro.board.first_api_level=34. Building this
+# tree against fox_12.1/SDK 32 can compile after forcing API values down, but
+# produces an incompatible userspace which can stall at the OrangeFox splash.
+device_mk = (D / "device.mk").read_text()
+for expected in (
+    "PRODUCT_SHIPPING_API_LEVEL  := 34",
+    "PRODUCT_TARGET_VNDK_VERSION := 34",
+    "BOARD_SHIPPING_API_LEVEL    := 34",
+    "SHIPPING_API_LEVEL          := 34",
+):
+    if expected not in device_mk:
+        errors.append(f"fox_14.1/API34 compatibility setting missing: {expected}")
+
+lock = (ROOT / "config/source-lock.env").read_text()
+if "FOX_BRANCH=14.1" not in lock:
+    errors.append("source lock must use OrangeFox fox_14.1")
+if "FOX_BRANCH=12.1" in lock:
+    errors.append("fox_12.1 is incompatible with the known-good SDK34 recovery profile")
+
+for label, text in (("GitHub workflow", workflow), ("local build script", local_build)):
+    if "fox_12.1" in text:
+        errors.append(f"{label}: stale fox_12.1 source path remains")
+    if "twrp_tiro-eng" in text and "twrp_tiro-ap2a-eng" not in text:
+        errors.append(f"{label}: fox_14.1 build must use twrp_tiro-ap2a-eng")
+
 
 product = (D / "twrp_tiro.mk").read_text()
 for expected in (
@@ -128,4 +198,5 @@ print("  header: v4")
 print("  ramdisk: LZ4")
 print("  embedded kernel: excluded")
 print("  haptics: enabled via direct input FF patch, sysfs fallback")
+print("  source profile: OrangeFox fox_14.1 / Android 14 / SDK 34")
 print("  decrypt compatibility stack: byte-identical to known-good ramdisk")

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Host-side regression test for the Red Magic haptics patch.
 
-This test validates both the textual OrangeFox 12.1 patch anchors and the exact
+This test validates both the textual OrangeFox 14.1 patch anchors and the exact
 input-force-feedback helper C++ injected by patch_haptics.py. It performs no
 hardware I/O; the helper is called with a zero duration so it returns before
 trying to play an effect.
@@ -22,7 +22,7 @@ assert spec and spec.loader
 mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)
 
-# Current OrangeFox 12.1 haptics block shape. Keep this intentionally small: the
+# Current OrangeFox 14.1 haptics block shape. Keep this intentionally small: the
 # production patch still runs against the real synced events.cpp and fails hard
 # if upstream changes an anchor.
 UPSTREAM_FRAGMENT = '''#define VIBRATOR_TIMEOUT_FILE\t"/sys/class/timed_output/vibrator/enable"

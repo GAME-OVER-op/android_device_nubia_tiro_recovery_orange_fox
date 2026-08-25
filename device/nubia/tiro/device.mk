@@ -31,11 +31,13 @@ PRODUCT_PACKAGES += \
     bootctrl.xiaomi_sm8735.recovery \
     android.hardware.boot@1.2-impl-qti.recovery
 
-# API
+# Android 14 / OrangeFox fox_14.1 build profile
+# The known-good ramdisk reports SDK 34, ro.product.first_api_level=34 and
+# ro.board.first_api_level=34. Keep the source build aligned with it.
 PRODUCT_SHIPPING_API_LEVEL  := 34
 PRODUCT_TARGET_VNDK_VERSION := 34
-BOARD_SHIPPING_API_LEVEL := 34
-SHIPPING_API_LEVEL := 34
+BOARD_SHIPPING_API_LEVEL    := 34
+SHIPPING_API_LEVEL          := 34
 
 # Dynamic partitions
 PRODUCT_USE_DYNAMIC_PARTITIONS := true

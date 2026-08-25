@@ -25,18 +25,19 @@ concurrency:
 
 jobs:
   build:
-    name: OrangeFox 12.1 / tiro
+    name: OrangeFox 14.1 / tiro
     runs-on: ubuntu-22.04
     timeout-minutes: 360
 
     env:
-      FOX_SRC: ${{ github.workspace }}/fox_12.1
+      FOX_SRC: ${{ github.workspace }}/fox_14.1
       OUT_DIR: ${{ github.workspace }}/out
       FOX_BUILD_DEVICE: tiro
       ALLOW_MISSING_DEPENDENCIES: 'true'
       LC_ALL: C
       BUILD_JOBS: '2'
       FOX_SYNC_REV: 14eca5f7
+      JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
 
     steps:
       - name: Checkout recovery project
@@ -71,7 +72,7 @@ jobs:
             git git-lfs gnupg gperf imagemagick lib32ncurses-dev lib32readline-dev \
             lib32z1-dev libc6-dev-i386 libelf-dev libgl1-mesa-dev liblz4-tool \
             libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lz4 \
-            openjdk-11-jdk pngcrush python3 python3-pip python-is-python3 repo rsync \
+            openjdk-17-jdk pngcrush python3 python3-pip python-is-python3 repo rsync \
             schedtool squashfs-tools unzip xsltproc zip zlib1g-dev
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
@@ -84,7 +85,7 @@ jobs:
           g++ -std=c++17 -Wall -Wextra -Werror scripts/haptics_ff_smoketest.cpp -o /tmp/haptics_ff_smoketest
           /tmp/haptics_ff_smoketest
 
-      - name: Sync OrangeFox 12.1 minimal source
+      - name: Sync OrangeFox 14.1 minimal source
         shell: bash
         run: |
           set -euxo pipefail
@@ -96,7 +97,7 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          export TIRO_BUILD_VERSION="${GITHUB_SHA::8}"
+          export TIRO_BUILD_VERSION="${GITHUB_RUN_NUMBER}"
           scripts/prepare_source.sh
           grep -n "TIRO_INPUT_FF_HAPTICS" "$FOX_SRC/bootable/recovery/minuitwrp/events.cpp"
           if grep -q 'AServiceManager_getService(kVibratorInstance.c_str())' "$FOX_SRC/bootable/recovery/minuitwrp/events.cpp"; then
@@ -109,14 +110,54 @@ jobs:
         run: |
           set -euxo pipefail
           export FOX_BUILD_TYPE="${{ inputs.build_type || 'Unofficial' }}"
-          export TIRO_BUILD_VERSION="${GITHUB_SHA::8}"
+          export TIRO_BUILD_VERSION="${GITHUB_RUN_NUMBER}"
           export FOX_BUILD_DEVICE=tiro
           export ALLOW_MISSING_DEPENDENCIES=true
           # Hosted runners are ephemeral; ccache only consumes scarce disk here.
           export USE_CCACHE=0
           cd "$FOX_SRC"
+
+          # AOSP/OrangeFox envsetup is designed to be sourced by an interactive
+          # shell. It is neither nounset-safe nor guaranteed to return zero: the
+          # last optional probe in the script may legitimately be a false `[ -s ]`
+          # test. Disable -u for the Android shell environment and temporarily
+          # disable -e only while sourcing envsetup. Re-enable -e immediately,
+          # then validate the functions/top directory before doing any build work.
+          set +u
+          set +e
           source build/envsetup.sh
-          lunch twrp_tiro-eng
+          ENVSETUP_RC=$?
+          set -e
+
+          if ! declare -F lunch >/dev/null; then
+            echo "ERROR: envsetup did not define lunch (rc=$ENVSETUP_RC)" >&2
+            exit 1
+          fi
+          if ! declare -F mka >/dev/null; then
+            echo "ERROR: envsetup did not define mka (rc=$ENVSETUP_RC)" >&2
+            exit 1
+          fi
+
+          RESOLVED_TOP="$(gettop 2>/dev/null || true)"
+          if [[ "$RESOLVED_TOP" != "$FOX_SRC" ]]; then
+            echo "ERROR: envsetup resolved Android top incorrectly" >&2
+            echo "  expected: $FOX_SRC" >&2
+            echo "  resolved: $RESOLVED_TOP" >&2
+            exit 1
+          fi
+
+          if (( ENVSETUP_RC != 0 )); then
+            echo "::warning::build/envsetup.sh returned $ENVSETUP_RC after completing setup; continuing because lunch/mka/gettop validation passed."
+          fi
+
+          lunch twrp_tiro-ap2a-eng
+
+          PLATFORM_SDK="$(get_build_var PLATFORM_SDK_VERSION)"
+          PRODUCT_API="$(get_build_var PRODUCT_SHIPPING_API_LEVEL)"
+          if [[ "$PLATFORM_SDK" != "34" || "$PRODUCT_API" != "34" ]]; then
+            echo "ERROR: wrong OrangeFox runtime profile: platform_sdk=$PLATFORM_SDK product_api=$PRODUCT_API; expected 34/34" >&2
+            exit 1
+          fi
           mka -j"${BUILD_JOBS}" adbd recoveryimage
 
       - name: Verify and stage artifacts

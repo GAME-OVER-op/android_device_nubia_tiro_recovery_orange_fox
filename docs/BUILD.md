@@ -1,49 +1,33 @@
-# Build Notes
+# Building
 
-## Source base
+This project builds against OrangeFox **fox_14.1**, matching the Android 14 / SDK 34 profile of the known-good recovery ramdisk.
 
-OrangeFox 12.1 is synchronized through the project's official `sync` helper.
-That helper currently uses the TWRP 12.1 minimal manifest, patches the build
-system for OrangeFox, and fetches the OrangeFox recovery core and vendor tree.
+## GitHub Actions
 
-## Build target
+Run **Build flashable recovery.img** from the Actions tab. The workflow synchronizes the official OrangeFox 14.1 minimal source, installs the `tiro` tree, applies the non-blocking haptics patch, builds, verifies, and uploads the image.
+
+## Local build
 
 ```bash
-lunch twrp_tiro-eng
+export FOX_SRC=/work/fox_14.1
+export OUT_DIR=/work/out
+./scripts/build_local.sh
+```
+
+The effective build command is:
+
+```bash
+source build/envsetup.sh
+lunch twrp_tiro-ap2a-eng
 mka adbd recoveryimage
 ```
 
-Expected product output:
+Java 17 is recommended for the Android 14 source tree.
+
+## Output
 
 ```text
-$OUT_DIR/target/product/tiro/recovery.img
+dist/recovery.img
+dist/recovery.img.sha256
+dist/build-info.txt
 ```
-
-## Why the kernel is not built
-
-The known-good image is a header-v4 recovery image with an empty kernel section.
-The device's recovery partition is therefore a recovery ramdisk image, not a
-standalone replacement kernel image.
-
-Building the Lineage kernel and embedding it would change the boot model and
-could introduce module/vendor_boot ABI mismatches. The kernel repositories are
-kept as hardware references only.
-
-## Clean minuitwrp output
-
-`prepare_source.sh` removes stale recovery-root/minuitwrp outputs before the
-build. This is intentional: OrangeFox/TWRP incremental builds can otherwise
-leave an older relinked `libminuitwrp.so` in the recovery ramdisk even after the
-source haptics code was changed.
-
-## Image verification
-
-`verify_recovery.sh` checks:
-
-- Android boot image magic;
-- image does not exceed the 100 MiB recovery partition;
-- SHA-256;
-- AVB information when `avbtool` is available;
-- compiled `libminuitwrp.so` does not contain the Xiaomi vibratorfeature
-  instance string;
-- critical decryption files are present in the final recovery root.

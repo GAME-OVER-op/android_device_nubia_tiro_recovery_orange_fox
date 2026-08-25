@@ -1,0 +1,17 @@
+Known-good recovery runtime profile extracted from the supplied AIK ramdisk
+=======================================================================
+
+ro.build.version.sdk=34
+ro.product.first_api_level=34
+ro.board.first_api_level=34
+ro.build.version.release_or_preview_display=14
+ro.build.version.release=99.87.36
+ro.build.version.security_patch=2127-12-31
+
+Original device-tree vendorsetup references:
+  OrangeFox vendor/recovery fox_14.1 build variables
+  OrangeFox bootable/Recovery fox_14.1 orangefox.mk
+
+Conclusion:
+  fox_14.1 / Android 14 is the required source baseline for reproducing the
+  proven recovery userspace. fox_12.1 / SDK 32 is not runtime-equivalent.

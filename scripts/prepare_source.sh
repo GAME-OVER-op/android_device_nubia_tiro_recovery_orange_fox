@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FOX_SRC="${FOX_SRC:-$ROOT/.work/fox_12.1}"
+FOX_SRC="${FOX_SRC:-$ROOT/.work/fox_14.1}"
 
 [[ -d "$FOX_SRC/bootable/recovery" ]] || { echo "Missing OrangeFox source: $FOX_SRC" >&2; exit 2; }
 

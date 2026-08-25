@@ -4,15 +4,15 @@ OrangeFox sync tool:
 
 OrangeFox recovery core (pulled by the sync tool):
   https://gitlab.com/OrangeFox/bootable/Recovery.git
-  branch: fox_12.1
+  branch: fox_14.1
 
 OrangeFox vendor tree (pulled by the sync tool):
   https://gitlab.com/OrangeFox/vendor/recovery.git
-  branch: fox_12.1
+  branch: fox_14.1
 
 TWRP minimal manifest (selected by OrangeFox sync):
   https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git
-  branch: twrp-12.1
+  branch: twrp-14.1
 
 Nubia device/kernel references:
   https://github.com/nubia-sm8650-devs/android_device_nubia_tiro

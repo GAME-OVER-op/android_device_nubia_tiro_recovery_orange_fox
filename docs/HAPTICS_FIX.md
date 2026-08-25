@@ -20,7 +20,7 @@ TW_SUPPORT_INPUT_AIDL_HAPTICS_FQNAME := "IVibrator/vibratorfeature"
 TW_SUPPORT_INPUT_AIDL_HAPTICS_FIX_OFF := true
 ```
 
-OrangeFox 12.1's `minuitwrp/events.cpp` resolves that vibrator service from the
+OrangeFox 14.1's `minuitwrp/events.cpp` resolves that vibrator service from the
 UI vibration path. A blocking service lookup is inappropriate when the device's
 recovery environment does not provide that exact Xiaomi service.
 

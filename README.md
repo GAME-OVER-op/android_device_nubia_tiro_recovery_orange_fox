@@ -112,7 +112,7 @@ dist/recovery.img
 For a separate source/output location:
 
 ```bash
-FOX_SRC=/work/fox_12.1 OUT_DIR=/work/out ./scripts/build_local.sh
+FOX_SRC=/work/fox_14.1 OUT_DIR=/work/out ./scripts/build_local.sh
 ```
 
 ## Flashing
@@ -171,7 +171,7 @@ docs/                                  architecture/build/CI/troubleshooting not
 
 ## Upstream
 
-The workflow uses OrangeFox 12.1's official sync tooling. Nubia SM8650 sources
+The workflow uses OrangeFox 14.1's official sync tooling. Nubia SM8650 sources
 are used as hardware references and are listed in `reference/UPSTREAM_SOURCES.txt`.
 The flashable recovery image does not embed the Lineage kernel.
 

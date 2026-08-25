@@ -17,6 +17,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
   echo "ramdisk_compression=lz4"
   echo "kernel_in_recovery=false"
   echo "haptics_backend=input-force-feedback-with-sysfs-fallback"
+  echo "maintainer_patch_version=${TIRO_BUILD_VERSION:-0}"
   echo "build_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   echo "project_commit=$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo archive)"
   if [[ -n "$FOX_SRC" && -d "$FOX_SRC/bootable/recovery/.git" ]]; then

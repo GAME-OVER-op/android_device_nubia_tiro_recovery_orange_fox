@@ -2,17 +2,22 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FOX_SRC="${FOX_SRC:-$ROOT/.work/fox_12.1}"
-SYNC_DIR="${FOX_SYNC_DIR:-$ROOT/.work/orangefox-sync}"
 LOCK_FILE="$ROOT/config/source-lock.env"
 LOCKED_FOX_SYNC_REV="14eca5f7"
+LOCKED_FOX_BRANCH="14.1"
 if [[ -f "$LOCK_FILE" ]]; then
   v="$(sed -n 's/^FOX_SYNC_REV=//p' "$LOCK_FILE" | head -n1)"
   [[ -n "$v" ]] && LOCKED_FOX_SYNC_REV="$v"
+  v="$(sed -n 's/^FOX_BRANCH=//p' "$LOCK_FILE" | head -n1)"
+  [[ -n "$v" ]] && LOCKED_FOX_BRANCH="$v"
 fi
-# Pinned by default for reproducibility. Explicit FOX_SYNC_REV still wins.
+
 FOX_SYNC_REV="${FOX_SYNC_REV:-$LOCKED_FOX_SYNC_REV}"
+FOX_BRANCH="${FOX_BRANCH:-$LOCKED_FOX_BRANCH}"
+FOX_SRC="${FOX_SRC:-$ROOT/.work/fox_${FOX_BRANCH}}"
+SYNC_DIR="${FOX_SYNC_DIR:-$ROOT/.work/orangefox-sync}"
 SYNC_JOBS="${SYNC_JOBS:-4}"
+PATCH_FILE="patches/patch-manifest-fox_${FOX_BRANCH}.diff"
 
 mkdir -p "$(dirname "$FOX_SRC")" "$(dirname "$SYNC_DIR")"
 
@@ -23,14 +28,10 @@ else
 fi
 
 git -C "$SYNC_DIR" checkout --detach "$FOX_SYNC_REV"
-
 echo "OrangeFox sync helper revision: $(git -C "$SYNC_DIR" rev-parse HEAD)"
+echo "OrangeFox branch: $FOX_BRANCH"
 
-# Fail early with a useful diagnostic if the pinned upstream revision is
-# incomplete or changes its layout in the future.
-for required in \
-  orangefox_sync.sh \
-  patches/patch-manifest-fox_12.1.diff; do
+for required in orangefox_sync.sh "$PATCH_FILE"; do
   if [[ ! -f "$SYNC_DIR/$required" ]]; then
     echo "ERROR: pinned OrangeFox sync helper is missing: $required" >&2
     exit 1
@@ -52,19 +53,13 @@ retry() {
 }
 
 run_official_sync_helper() {
-  # IMPORTANT: OrangeFox's helper resolves its bundled patches relative to
-  # $PWD (BASE_DIR="$PWD"), not relative to the script file itself. Always run
-  # it from the root of the cloned sync repository or it will look for files
-  # such as patches/patch-manifest-fox_12.1.diff in the caller's directory.
   (
     cd "$SYNC_DIR"
-    ./orangefox_sync.sh --branch 12.1 --path "$FOX_SRC"
+    ./orangefox_sync.sh --branch "$FOX_BRANCH" --path "$FOX_SRC"
   )
 }
 
 if [[ ! -d "$FOX_SRC/.repo" ]]; then
-  # The official helper is explicitly designed to be rerun if a network sync is
-  # interrupted, so use a small retry budget for GitHub-hosted runners.
   retry 3 run_official_sync_helper
 else
   cd "$FOX_SRC"
@@ -77,4 +72,4 @@ else
   fi
 fi
 
-echo "OrangeFox source ready at: $FOX_SRC"
+echo "OrangeFox $FOX_BRANCH source ready at: $FOX_SRC"

@@ -54,7 +54,22 @@ if [ "$FOX_BUILD_DEVICE" = "$FDEVICE" ]; then
 	export FOX_ENABLE_SUKISU_SUPPORT=1
 	export FOX_USE_BUSYBOX_BINARY=1
 	export FOX_SETTINGS_ROOT_DIRECTORY="/persist"
-	export FOX_MAINTAINER_PATCH_VERSION="${TIRO_BUILD_VERSION:-local}"
+	# OrangeFox requires FOX_MAINTAINER_PATCH_VERSION to be a
+	# canonical whole number (orangefox.mk validates it with printf %d).
+	# CI passes GITHUB_RUN_NUMBER. For local builds, accept an optional
+	# numeric TIRO_BUILD_VERSION and fall back safely to 0.
+	TIRO_PATCH_VERSION="${TIRO_BUILD_VERSION:-0}"
+	case "$TIRO_PATCH_VERSION" in
+		''|*[!0-9]*)
+			echo "W: TIRO_BUILD_VERSION must contain decimal digits only; using 0" >&2
+			TIRO_PATCH_VERSION=0
+			;;
+	esac
+	# Remove leading zeroes so OrangeFox's textual whole-number check also
+	# succeeds (for example, 0007 must become 7).
+	TIRO_PATCH_VERSION="$(printf '%s' "$TIRO_PATCH_VERSION" | sed 's/^0*//')"
+	[ -n "$TIRO_PATCH_VERSION" ] || TIRO_PATCH_VERSION=0
+	export FOX_MAINTAINER_PATCH_VERSION="$TIRO_PATCH_VERSION"
 	export FOX_ALLOW_EARLY_SETTINGS_LOAD=1
 	
 	# Disable OrangeFox settings reset during zip flash

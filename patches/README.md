@@ -7,7 +7,7 @@ scripts/patch_haptics.py
 ```
 
 A scripted transformation is used instead of a fragile line-number-dependent
-unified diff because the OrangeFox `fox_12.1` branch continues to receive
+unified diff because the OrangeFox `fox_14.1` branch continues to receive
 maintenance commits. The script validates the expected upstream code anchors,
 refuses to continue if they are missing, and is idempotent.
 
