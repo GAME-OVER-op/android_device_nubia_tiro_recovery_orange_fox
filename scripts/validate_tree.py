@@ -38,6 +38,8 @@ for rel in [
     "reference/SPLIT_IMAGE_LAYOUT.txt",
     "reference/WORKING_DECRYPT_STACK.txt",
     "reference/KNOWN_GOOD_RUNTIME_PROFILE.txt",
+    "scripts/setup_ci_swap.sh",
+    "scripts/build_heartbeat.sh",
 ]:
     if not (ROOT / rel).is_file():
         errors.append(f"missing: {rel}")
@@ -93,6 +95,18 @@ for label, text in (("GitHub workflow", workflow), ("local build script", local_
 
 # OrangeFox accepts FOX_MAINTAINER_PATCH_VERSION only as a canonical
 # decimal whole number. CI must never feed a Git SHA into this field.
+if 'uses: actions/checkout@v6' not in workflow:
+    errors.append("GitHub workflow must use actions/checkout@v6 (Node.js 24 runtime)")
+if 'uses: actions/upload-artifact@v6' not in workflow:
+    errors.append("GitHub workflow must use actions/upload-artifact@v6 (Node.js 24 runtime)")
+if 'scripts/setup_ci_swap.sh 16 18' not in workflow:
+    errors.append("GitHub workflow must request 16 GiB CI swap with disk reserve")
+if 'scripts/build_heartbeat.sh" 60 &' not in workflow:
+    errors.append("GitHub workflow must start the 60-second build heartbeat around mka")
+if 'trap cleanup_build_resources EXIT INT TERM' not in workflow:
+    errors.append("GitHub workflow must clean up the build heartbeat/swap with a trap")
+if 'sudo swapoff /swapfile' not in workflow:
+    errors.append("GitHub workflow must release the CI swapfile after compilation")
 if 'export TIRO_BUILD_VERSION="${GITHUB_RUN_NUMBER}"' not in workflow:
     errors.append("GitHub workflow must use numeric GITHUB_RUN_NUMBER for TIRO_BUILD_VERSION")
 if 'export TIRO_BUILD_VERSION="${GITHUB_SHA::8}"' in workflow:
@@ -199,4 +213,6 @@ print("  ramdisk: LZ4")
 print("  embedded kernel: excluded")
 print("  haptics: enabled via direct input FF patch, sysfs fallback")
 print("  source profile: OrangeFox fox_14.1 / Android 14 / SDK 34")
+print("  CI memory: adaptive swap targeting 16 GiB + 60 s heartbeat")
+print("  GitHub JS actions: checkout@v6 + upload-artifact@v6 / Node.js 24")
 print("  decrypt compatibility stack: byte-identical to known-good ramdisk")

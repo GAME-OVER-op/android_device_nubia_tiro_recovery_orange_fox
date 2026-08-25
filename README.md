@@ -92,6 +92,13 @@ RedMagic9Pro-tiro-recovery-<commit>
 
 The artifact contains the flashable `recovery.img`.
 
+The hosted-runner build also targets a **16 GiB swapfile** immediately before
+compilation. To avoid trading an OOM for a disk-full failure, the swap helper
+keeps roughly 18 GiB free for Android build output and automatically reduces
+the swap size when required. During `mka`, a 60-second heartbeat reports RAM,
+swap, disk usage and active Soong/Ninja processes so long dependency-graph
+phases do not look like silent hangs.
+
 A tag matching `v*` also starts a build automatically.
 
 ## Local build

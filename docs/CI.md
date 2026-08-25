@@ -56,3 +56,22 @@ The workflow refuses to publish an image if the Android boot-image magic is miss
 ## Numeric OrangeFox patch version
 
 `FOX_MAINTAINER_PATCH_VERSION` must be numeric. GitHub Actions maps it to `GITHUB_RUN_NUMBER`; the exact repository commit is recorded separately in `build-info.txt`.
+
+## Memory pressure and build heartbeat
+
+Immediately before compilation, GitHub Actions requests a **16 GiB swapfile** via
+`scripts/setup_ci_swap.sh`. The script deliberately preserves about 18 GiB of
+free filesystem space for Soong/Ninja output. If the hosted runner does not have
+enough disk for the full 16 GiB swapfile, it automatically chooses the largest
+safe size (minimum 4 GiB) and emits a workflow warning. If `swapon` is forbidden
+by the runner, the build continues without failing solely because of swap setup.
+
+During `mka`, `scripts/build_heartbeat.sh` prints a status group every 60 seconds
+containing load average, RAM, swap usage, `vmstat`, disk space, active Android
+build processes, and the largest memory consumers. This is intentional: Soong's
+bootstrap/dependency-graph phase can remain visually at 99% for a long period
+without writing normal build progress.
+
+The repository uses `actions/checkout@v6` and `actions/upload-artifact@v6`; both run on Node.js 24.
+
+The swapfile is removed immediately after compilation (including build-step failures via the shell trap) so artifact verification and staging regain that disk space.

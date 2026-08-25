@@ -121,3 +121,32 @@ The project must retain API/VNDK 34 and build on fox_14.1. A fox_12.1 image may 
 OrangeFox 14.1 validates `FOX_MAINTAINER_PATCH_VERSION` with `printf %d` and rejects hashes or other non-decimal strings. Do not pass a Git commit prefix such as `a7f852ef` here.
 
 This project uses GitHub Actions `GITHUB_RUN_NUMBER` as the maintainer patch version. Local builds default to `0`; an explicitly supplied `TIRO_BUILD_VERSION` must contain decimal digits only. The project commit SHA is recorded separately in `build-info.txt`, so no traceability is lost.
+
+## Build appears stuck at `soong_build` around 99%
+
+A line such as:
+
+```text
+[ 99% ...] cp .../bin/soong_build
+```
+
+is not by itself a deadlock. After the Soong bootstrap binary is linked, Soong
+can spend a substantial period parsing `Android.bp` files and generating the
+full Ninja dependency graph without normal progress output.
+
+The GitHub workflow starts a 60-second heartbeat before `mka`. Inspect the
+collapsed `BUILD HEARTBEAT` groups. If `soong_build`/`soong_ui` is present and
+CPU time, RSS, swap, or load are changing, the build is still making progress.
+If the process disappears or remains at effectively zero CPU for many heartbeat
+intervals while no child build process exists, collect those heartbeat blocks
+with the subsequent error.
+
+The workflow also attempts to enable a 16 GiB swapfile. It preserves disk space
+for `out/`, so the actual swap size can be lower when the runner is short on
+storage. This is expected and is printed explicitly in the log.
+
+## Node.js 20 deprecation warning from `actions/checkout@v4`
+
+The workflow now uses `actions/checkout@v6` (Node.js 24 runtime). If an older
+repository revision still shows the Node.js 20 warning, update
+`.github/workflows/build-recovery.yml` from this project revision.

@@ -41,7 +41,7 @@ jobs:
 
     steps:
       - name: Checkout recovery project
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1
 
@@ -105,6 +105,12 @@ jobs:
             exit 1
           fi
 
+      - name: Configure build swap
+        shell: bash
+        run: |
+          set -euxo pipefail
+          scripts/setup_ci_swap.sh 16 18
+
       - name: Build recovery image
         shell: bash
         run: |
@@ -158,7 +164,24 @@ jobs:
             echo "ERROR: wrong OrangeFox runtime profile: platform_sdk=$PLATFORM_SDK product_api=$PRODUCT_API; expected 34/34" >&2
             exit 1
           fi
+          # Soong can spend a long time generating the dependency graph with
+          # no console output. Keep a lightweight heartbeat alive so CI logs show
+          # CPU/RAM/swap/disk pressure and whether Soong/Ninja are still running.
+          "$GITHUB_WORKSPACE/scripts/build_heartbeat.sh" 60 &
+          HEARTBEAT_PID=$!
+          cleanup_build_resources() {
+            kill "$HEARTBEAT_PID" 2>/dev/null || true
+            wait "$HEARTBEAT_PID" 2>/dev/null || true
+            # Reclaim swapfile disk as soon as compilation ends.
+            sudo swapoff /swapfile 2>/dev/null || true
+            sudo rm -f /swapfile 2>/dev/null || true
+          }
+          trap cleanup_build_resources EXIT INT TERM
+
           mka -j"${BUILD_JOBS}" adbd recoveryimage
+
+          cleanup_build_resources
+          trap - EXIT INT TERM
 
       - name: Verify and stage artifacts
         shell: bash
@@ -181,7 +204,7 @@ jobs:
           ls -lh "$GITHUB_WORKSPACE/dist"
 
       - name: Upload flashable image
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: RedMagic9Pro-tiro-recovery-${{ github.sha }}
           path: |
