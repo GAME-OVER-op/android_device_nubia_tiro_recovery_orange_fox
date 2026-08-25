@@ -1,0 +1,152 @@
+name: Build flashable recovery.img
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: OrangeFox build type
+        required: true
+        default: Unofficial
+        type: choice
+        options:
+          - Unofficial
+          - Beta
+          - Stable
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: recovery-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: OrangeFox 12.1 / tiro
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
+
+    env:
+      FOX_SRC: ${{ github.workspace }}/fox_12.1
+      OUT_DIR: ${{ github.workspace }}/out
+      FOX_BUILD_DEVICE: tiro
+      ALLOW_MISSING_DEPENDENCIES: 'true'
+      LC_ALL: C
+      BUILD_JOBS: '2'
+      FOX_SYNC_REV: 14eca5f7
+
+    steps:
+      - name: Checkout recovery project
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Free runner disk space
+        shell: bash
+        run: |
+          set -euxo pipefail
+          df -h
+          sudo rm -rf /usr/local/lib/android || true
+          sudo rm -rf /usr/share/dotnet || true
+          sudo rm -rf /opt/ghc || true
+          sudo rm -rf /usr/local/.ghcup || true
+          sudo rm -rf /opt/hostedtoolcache/CodeQL || true
+          sudo rm -rf /usr/share/swift || true
+          sudo rm -rf /usr/local/share/boost || true
+          sudo rm -rf /opt/microsoft || true
+          docker system prune -af || true
+          sudo apt-get clean
+          df -h
+
+      - name: Install build dependencies
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            bc bison build-essential cpio curl flex g++-multilib gcc-multilib \
+            git git-lfs gnupg gperf imagemagick lib32ncurses-dev lib32readline-dev \
+            lib32z1-dev libc6-dev-i386 libelf-dev libgl1-mesa-dev liblz4-tool \
+            libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lz4 \
+            openjdk-11-jdk pngcrush python3 python3-pip python-is-python3 repo rsync \
+            schedtool squashfs-tools unzip xsltproc zip zlib1g-dev
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+      - name: Validate bundled device tree and haptics patch
+        run: |
+          set -euxo pipefail
+          python3 scripts/validate_tree.py
+          python3 scripts/test_haptics_patch.py
+          g++ -std=c++17 -Wall -Wextra -Werror scripts/haptics_ff_smoketest.cpp -o /tmp/haptics_ff_smoketest
+          /tmp/haptics_ff_smoketest
+
+      - name: Sync OrangeFox 12.1 minimal source
+        shell: bash
+        run: |
+          set -euxo pipefail
+          export FOX_SYNC_DIR="$GITHUB_WORKSPACE/orangefox-sync"
+          scripts/sync_fox.sh
+          df -h
+
+      - name: Install tiro tree and patch haptics
+        shell: bash
+        run: |
+          set -euxo pipefail
+          export TIRO_BUILD_VERSION="${GITHUB_SHA::8}"
+          scripts/prepare_source.sh
+          grep -n "TIRO_INPUT_FF_HAPTICS" "$FOX_SRC/bootable/recovery/minuitwrp/events.cpp"
+          if grep -q 'AServiceManager_getService(kVibratorInstance.c_str())' "$FOX_SRC/bootable/recovery/minuitwrp/events.cpp"; then
+            echo "Blocking vibrator service lookup survived patch" >&2
+            exit 1
+          fi
+
+      - name: Build recovery image
+        shell: bash
+        run: |
+          set -euxo pipefail
+          export FOX_BUILD_TYPE="${{ inputs.build_type || 'Unofficial' }}"
+          export TIRO_BUILD_VERSION="${GITHUB_SHA::8}"
+          export FOX_BUILD_DEVICE=tiro
+          export ALLOW_MISSING_DEPENDENCIES=true
+          # Hosted runners are ephemeral; ccache only consumes scarce disk here.
+          export USE_CCACHE=0
+          cd "$FOX_SRC"
+          source build/envsetup.sh
+          lunch twrp_tiro-eng
+          mka -j"${BUILD_JOBS}" adbd recoveryimage
+
+      - name: Verify and stage artifacts
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PRODUCT_OUT="$OUT_DIR/target/product/tiro"
+          IMG="$PRODUCT_OUT/recovery.img"
+          test -f "$IMG"
+          rm -rf "$GITHUB_WORKSPACE/dist"
+          mkdir -p "$GITHUB_WORKSPACE/dist"
+          cp "$IMG" "$GITHUB_WORKSPACE/dist/recovery.img"
+          "$GITHUB_WORKSPACE/scripts/verify_recovery.sh" \
+            "$GITHUB_WORKSPACE/dist/recovery.img" "$PRODUCT_OUT"
+          sha256sum "$GITHUB_WORKSPACE/dist/recovery.img" > "$GITHUB_WORKSPACE/dist/recovery.img.sha256"
+          "$GITHUB_WORKSPACE/scripts/make_build_info.sh" \
+            "$GITHUB_WORKSPACE/dist/recovery.img" \
+            "$GITHUB_WORKSPACE/dist/build-info.txt" \
+            "$FOX_SRC"
+          cp "$PRODUCT_OUT/recovery/root/tmp/recovery.log" "$GITHUB_WORKSPACE/dist/build-recovery.log" 2>/dev/null || true
+          ls -lh "$GITHUB_WORKSPACE/dist"
+
+      - name: Upload flashable image
+        uses: actions/upload-artifact@v4
+        with:
+          name: RedMagic9Pro-tiro-recovery-${{ github.sha }}
+          path: |
+            dist/recovery.img
+            dist/recovery.img.sha256
+            dist/build-info.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30

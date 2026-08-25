@@ -1,0 +1,8 @@
+.work/
+out/
+fox_12.1/
+orangefox-sync/
+.ccache/
+dist/*
+!dist/.gitkeep
+*.log

@@ -1,0 +1,22 @@
+Known-good recovery image layout
+================================
+
+Extracted from the user-supplied, boot-tested recovery image with Android Image
+Kitchen / UKA-compatible split metadata.
+
+partition_name=recovery
+original_image_size=104857600
+boot_magic=ANDROID!
+image_type=AOSP
+boot_header_version=4
+kernel_size=0
+ramdisk_size=61589830
+ramdisk_compression=lz4-legacy
+os_version=99.87.36
+os_patch_level=2127-12
+command_line=
+boot_signature_size=0
+avb_footer_size_reference=104857600
+
+The empty kernel payload is intentional. The source project therefore keeps
+BOARD_EXCLUDE_KERNEL_FROM_RECOVERY_IMAGE=true.

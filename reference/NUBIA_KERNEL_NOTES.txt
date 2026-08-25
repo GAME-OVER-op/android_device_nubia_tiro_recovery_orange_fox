@@ -1,0 +1,25 @@
+Upstream Red Magic kernel notes
+===============================
+
+Repository:
+  https://github.com/nubia-sm8650-devs/android_kernel_nubia_sm8650
+Branch:
+  lineage-23.2
+
+External modules:
+  https://github.com/nubia-sm8650-devs/android_kernel_nubia_sm8650-modules
+Branch:
+  lineage-23.2
+
+The supplied kernel tree contains:
+  arch/arm64/configs/oem/boards/tiro_diff.config
+  CONFIG_ZTE_BOARD_NAME="tiro"
+
+The SM8650 common configuration enables qcom-hv-haptics as a module, and the
+qcom-hv-haptics driver registers an input device named "qcom-hv-haptics" with
+FF_CONSTANT support. This is the haptics backend targeted by the recovery patch.
+
+The flashable recovery.img does NOT contain a kernel payload. Therefore this
+project deliberately does not rebuild or embed the Lineage kernel. This avoids
+mixing a recovery userspace with a kernel that may not match the user's current
+vendor_boot/module ABI.

@@ -1,0 +1,8 @@
+# ADB
+ro.adb.secure=0
+
+# Keystore / Keymaster
+fbe.metadata.wrappedkey=true
+
+# FUSE passthrough
+persist.sys.fuse.passthrough.enable=true

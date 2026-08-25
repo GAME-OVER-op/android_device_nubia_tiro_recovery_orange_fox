@@ -1,0 +1,15 @@
+*.bin binary
+*.b00 binary
+*.b01 binary
+*.b02 binary
+*.b03 binary
+*.b04 binary
+*.b05 binary
+*.b06 binary
+*.b07 binary
+*.b08 binary
+*.img binary
+*.ko binary
+*.mdt binary
+*.so binary
+prebuilt/kernel binary

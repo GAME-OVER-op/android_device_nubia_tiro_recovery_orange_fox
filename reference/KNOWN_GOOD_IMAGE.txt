@@ -1,0 +1,27 @@
+Known-good recovery reference
+=============================
+
+Device used for validation: nubia Red Magic 9 Pro (NX769J / tiro)
+Reference userspace origin: OrangeFox recovery originally built for Xiaomi onyx
+Observed behavior on tiro:
+- Recovery boots successfully.
+- Touch input works.
+- /data decryption works, including password/PIN entry.
+- Dynamic partitions, storage and the normal recovery workflow work.
+- Only known defect: tap-triggered actions are delayed by about five seconds per action.
+
+Image layout extracted from the supplied working image:
+- Partition: recovery
+- Partition size: 104857600 bytes (100 MiB)
+- Android boot header: v4
+- Recovery ramdisk compression: LZ4 legacy
+- Kernel payload inside recovery.img: empty (BOARD_EXCLUDE_KERNEL_FROM_RECOVERY_IMAGE=true)
+- Pixel format: RGBX_8888
+- AVB footer present
+- Reference AVB algorithm: NONE / hash footer
+- Reference OS version field: 99.87.36
+- Reference OS patch field: 2127-12
+
+The five-second-per-tap defect is addressed in this project by bypassing the
+Xiaomi recovery AIDL vibrator service and using Linux input force-feedback
+(qcom-hv-haptics) directly from minuitwrp. Haptics remain enabled.

@@ -1,0 +1,23 @@
+OrangeFox sync tool:
+  https://gitlab.com/OrangeFox/sync.git
+  branch: master
+
+OrangeFox recovery core (pulled by the sync tool):
+  https://gitlab.com/OrangeFox/bootable/Recovery.git
+  branch: fox_12.1
+
+OrangeFox vendor tree (pulled by the sync tool):
+  https://gitlab.com/OrangeFox/vendor/recovery.git
+  branch: fox_12.1
+
+TWRP minimal manifest (selected by OrangeFox sync):
+  https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git
+  branch: twrp-12.1
+
+Nubia device/kernel references:
+  https://github.com/nubia-sm8650-devs/android_device_nubia_tiro
+  https://github.com/nubia-sm8650-devs/android_device_nubia_sm8650-common
+  https://github.com/nubia-sm8650-devs/android_kernel_nubia_sm8650
+  https://github.com/nubia-sm8650-devs/android_kernel_nubia_sm8650-modules
+  https://github.com/nubia-sm8650-devs/android_kernel_nubia_sm8650-devicetrees
+  branch: lineage-23.2

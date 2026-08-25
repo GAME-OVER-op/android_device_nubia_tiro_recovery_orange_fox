@@ -1,0 +1,14 @@
+The following files in device/nubia/tiro/recovery/root were compared against
+the supplied, unpacked, working recovery ramdisk and matched byte-for-byte:
+
+vendor/bin/hw/android.hardware.security.keymint-service-qti
+vendor/bin/hw/android.hardware.gatekeeper-service-qti
+vendor/bin/qseecomd
+vendor/lib64/libqtikeymint.so
+vendor/lib64/libQSEEComAPI.so
+vendor/bin/prepdecrypt.sh
+system/etc/recovery.fstab
+init.recovery.qcom.rc
+
+These components are intentionally preserved in the first source-built tiro
+recovery because /data decryption is already proven to work with them.
