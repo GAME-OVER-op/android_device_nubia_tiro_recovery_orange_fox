@@ -11,6 +11,7 @@ rm -rf "$FOX_SRC/device/nubia/tiro"
 cp -a "$ROOT/device/nubia/tiro" "$FOX_SRC/device/nubia/tiro"
 
 python3 "$ROOT/scripts/patch_haptics.py" "$FOX_SRC/bootable/recovery/minuitwrp/events.cpp"
+python3 "$ROOT/scripts/patch_gui_button_logging.py" "$FOX_SRC/bootable/recovery/gui/button.cpp"
 
 # Clean stale minuitwrp/recovery-root outputs. Incremental builds can otherwise
 # retain an older libminuitwrp.so in the ramdisk even when source changed.

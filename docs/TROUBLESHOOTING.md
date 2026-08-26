@@ -150,3 +150,28 @@ storage. This is expected and is printed explicitly in the log.
 The workflow now uses `actions/checkout@v6` (Node.js 24 runtime). If an older
 repository revision still shows the Node.js 20 warning, update
 `.github/workflows/build-recovery.yml` from this project revision.
+
+
+### CI swap teardown
+
+The GitHub-hosted runner intentionally leaves the build swapfile enabled after `mka`. Disabling a heavily used 16 GiB swapfile with `swapoff` can stall a memory-constrained runner while pages are faulted back into RAM. GitHub-hosted runners are ephemeral, so the swapfile is discarded automatically when the runner is destroyed. Only the heartbeat process group is stopped explicitly after compilation.
+
+### Heartbeat shows only 3 GiB swap and it is 100% used
+
+GitHub-hosted runners may start with a small pre-existing `/swapfile`. The CI swap setup must treat `16` as the **target total active swap**, not as "create a swapfile only when none exists". The current helper keeps the runner-provided swap active and adds the missing capacity in `/swapfile-ci-extra`, normally bringing total swap to about 16 GiB while preserving 18 GiB of free disk.
+
+A heartbeat with RAM near 100%, swap at 100%, and very high `wa` in `vmstat` is memory-pressure thrashing rather than a deadlock. `soong_build` can legitimately use more than 14 GiB RSS on the Android 14 tree.
+
+## `E:No image resource or fill specified for button`
+
+This build intentionally keeps the upstream OrangeFox warning and augments it
+with `TIRO_GUI_BUTTON_DIAGNOSTICS`.  The extended line reports the button style,
+placement, first action and first condition, for example:
+
+```text
+E:No image resource or fill specified for button [TIRO_GUI_BUTTON_DIAGNOSTICS]: style='actionbar' placement{x='%ab_back_x%',y='%ab_y%',w='<none>',h='<none>',mode='4'} action='set' condition{var1='tw_busy',var2='1'}
+```
+
+The warning is non-fatal.  Capture the full lines from `/tmp/recovery.log` (or
+`adb shell cat /tmp/recovery.log`) after boot.  Once the exact theme elements
+are known, fix those XML entries rather than suppressing the warning globally.

@@ -48,6 +48,14 @@ if [ "$FOX_BUILD_DEVICE" = "$FDEVICE" ]; then
 	export FOX_USE_NANO_EDITOR=1
 	export FOX_DELETE_AROMAFM=1
 	export FOX_REMOVE_AAPT=1
+	# OrangeFox App Manager is disabled by default on modern branches. Enable
+	# the upstream implementation explicitly; do not replace it with a custom
+	# package database editor. Recovery already has working /data decryption.
+	export FOX_ENABLE_APP_MANAGER=1
+
+	# Keep the Magisk installer addon removed; this does NOT disable OrangeFox
+	# root-module management. The fox_14.1 UI can manage installed Magisk,
+	# APatch and KernelSU-family modules independently of the installer addon.
 	export FOX_DELETE_MAGISK_ADDON=1
 	export FOX_ENABLE_KERNELSU_SUPPORT=1
 	export FOX_ENABLE_KERNELSU_NEXT_SUPPORT=1

@@ -60,7 +60,7 @@ The workflow refuses to publish an image if the Android boot-image magic is miss
 ## Memory pressure and build heartbeat
 
 Immediately before compilation, GitHub Actions requests a **16 GiB swapfile** via
-`scripts/setup_ci_swap.sh`. The script deliberately preserves about 18 GiB of
+`scripts/setup_ci_swap.sh`. The script targets 16 GiB of total active swap and deliberately preserves about 18 GiB of
 free filesystem space for Soong/Ninja output. If the hosted runner does not have
 enough disk for the full 16 GiB swapfile, it automatically chooses the largest
 safe size (minimum 4 GiB) and emits a workflow warning. If `swapon` is forbidden
@@ -75,3 +75,17 @@ without writing normal build progress.
 The repository uses `actions/checkout@v6` and `actions/upload-artifact@v6`; both run on Node.js 24.
 
 The swapfile is removed immediately after compilation (including build-step failures via the shell trap) so artifact verification and staging regain that disk space.
+
+
+### CI swap teardown
+
+The GitHub-hosted runner intentionally leaves the build swapfile enabled after `mka`. Disabling a heavily used 16 GiB swapfile with `swapoff` can stall a memory-constrained runner while pages are faulted back into RAM. GitHub-hosted runners are ephemeral, so the swapfile is discarded automatically when the runner is destroyed. Only the heartbeat process group is stopped explicitly after compilation.
+
+## Selected feature checks
+
+The bundled tree validation requires `FOX_ENABLE_APP_MANAGER=1` and rejects an
+explicit App Manager disable flag. It also requires the existing KernelSU,
+KernelSU Next and SukiSU support flags used alongside OrangeFox fox_14.1's
+built-in root-module manager. These are configuration/build checks; final
+package enumeration and destructive module actions must still be verified on
+hardware after `/data` decryption.

@@ -101,21 +101,60 @@ if 'uses: actions/upload-artifact@v6' not in workflow:
     errors.append("GitHub workflow must use actions/upload-artifact@v6 (Node.js 24 runtime)")
 if 'scripts/setup_ci_swap.sh 16 18' not in workflow:
     errors.append("GitHub workflow must request 16 GiB CI swap with disk reserve")
-if 'scripts/build_heartbeat.sh" 60 &' not in workflow:
-    errors.append("GitHub workflow must start the 60-second build heartbeat around mka")
-if 'trap cleanup_build_resources EXIT INT TERM' not in workflow:
-    errors.append("GitHub workflow must clean up the build heartbeat/swap with a trap")
-if 'sudo swapoff /swapfile' not in workflow:
-    errors.append("GitHub workflow must release the CI swapfile after compilation")
+if 'setsid "$GITHUB_WORKSPACE/scripts/build_heartbeat.sh" 60 &' not in workflow:
+    errors.append("GitHub workflow must start the 60-second heartbeat in its own process group")
+if 'trap cleanup_build_monitor EXIT INT TERM' not in workflow:
+    errors.append("GitHub workflow must clean up only the build heartbeat with a trap")
+if 'sudo swapoff /swapfile' in workflow:
+    errors.append("GitHub workflow must not swapoff CI swap after compilation; it can hang the hosted runner")
+
+swap_helper = (ROOT / "scripts/setup_ci_swap.sh").read_text()
+if "/swapfile-ci-extra" not in swap_helper:
+    errors.append("CI swap helper must add missing swap capacity via /swapfile-ci-extra")
+if "current_swap_bytes" not in swap_helper or "DESIRED_TOTAL_GIB" not in swap_helper:
+    errors.append("CI swap helper must target total active swap, including any runner-provided swap")
+if "vm.swappiness=60" not in swap_helper:
+    errors.append("CI swap helper must use the validated swappiness=60 setting")
+if 'leaving CI swap enabled until runner teardown' not in workflow:
+    errors.append("GitHub workflow must document that swap stays active until ephemeral runner teardown")
 if 'export TIRO_BUILD_VERSION="${GITHUB_RUN_NUMBER}"' not in workflow:
     errors.append("GitHub workflow must use numeric GITHUB_RUN_NUMBER for TIRO_BUILD_VERSION")
 if 'export TIRO_BUILD_VERSION="${GITHUB_SHA::8}"' in workflow:
     errors.append("GitHub workflow must not use hexadecimal Git SHA as OrangeFox patch version")
 if 'export TIRO_BUILD_VERSION="${TIRO_BUILD_VERSION:-0}"' not in local_build:
     errors.append("local build must default TIRO_BUILD_VERSION to numeric 0")
+# Keep the temporary GUIButton diagnostic patch until the offending theme
+# elements have been identified on-device.  It must be applied during source
+# preparation and CI must verify the marker in the patched OrangeFox source.
+gui_patch = ROOT / "scripts/patch_gui_button_logging.py"
+prepare_source = (ROOT / "scripts/prepare_source.sh").read_text()
+if not gui_patch.is_file():
+    errors.append("GUI button diagnostic patch script is missing")
+else:
+    gui_patch_text = gui_patch.read_text()
+    if "TIRO_GUI_BUTTON_DIAGNOSTICS" not in gui_patch_text:
+        errors.append("GUI button diagnostic patch marker is missing")
+    if "style='%s'" not in gui_patch_text or "action='%s'" not in gui_patch_text:
+        errors.append("GUI button diagnostics must report style and first action")
+if "patch_gui_button_logging.py" not in prepare_source:
+    errors.append("prepare_source.sh does not apply GUI button diagnostics")
+if 'grep -n "TIRO_GUI_BUTTON_DIAGNOSTICS"' not in workflow:
+    errors.append("GitHub workflow does not verify GUI button diagnostics")
+
 vendorsetup = (D / "vendorsetup.sh").read_text()
 if 'export FOX_MAINTAINER_PATCH_VERSION="$TIRO_PATCH_VERSION"' not in vendorsetup:
     errors.append("vendorsetup must export normalized numeric FOX_MAINTAINER_PATCH_VERSION")
+if 'export FOX_ENABLE_APP_MANAGER=1' not in vendorsetup:
+    errors.append("OrangeFox App Manager must be explicitly enabled")
+if 'FOX_DISABLE_APP_MANAGER=1' in vendorsetup or 'export FOX_DISABLE_APP_MANAGER=1' in vendorsetup:
+    errors.append("OrangeFox App Manager is explicitly disabled")
+for root_flag in (
+    'export FOX_ENABLE_KERNELSU_SUPPORT=1',
+    'export FOX_ENABLE_KERNELSU_NEXT_SUPPORT=1',
+    'export FOX_ENABLE_SUKISU_SUPPORT=1',
+):
+    if root_flag not in vendorsetup:
+        errors.append(f"root-module compatibility flag missing: {root_flag}")
 if 'TIRO_BUILD_VERSION:-local' in vendorsetup or 'FOX_MAINTAINER_PATCH_VERSION="${TIRO_BUILD_VERSION:-local}"' in vendorsetup:
     errors.append("vendorsetup contains non-numeric local patch-version fallback")
 
@@ -213,6 +252,9 @@ print("  ramdisk: LZ4")
 print("  embedded kernel: excluded")
 print("  haptics: enabled via direct input FF patch, sysfs fallback")
 print("  source profile: OrangeFox fox_14.1 / Android 14 / SDK 34")
-print("  CI memory: adaptive swap targeting 16 GiB + 60 s heartbeat")
+print("  CI memory: 16 GiB total active swap target + 60 s heartbeat; preserves existing runner swap; no post-build swapoff")
 print("  GitHub JS actions: checkout@v6 + upload-artifact@v6 / Node.js 24")
 print("  decrypt compatibility stack: byte-identical to known-good ramdisk")
+print("  OrangeFox App Manager: enabled")
+print("  GUI button warning diagnostics: enabled (style/placement/action/condition)")
+print("  root modules: OrangeFox fox_14.1 built-in manager; Magisk/APatch/KernelSU family")

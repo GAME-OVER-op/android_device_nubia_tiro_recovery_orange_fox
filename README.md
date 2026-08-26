@@ -69,6 +69,26 @@ This project patches `minuitwrp/events.cpp` to:
 
 Haptics are **not** disabled with `TW_NO_HAPTICS`.
 
+## Enabled service features
+
+This build intentionally enables only the additional recovery features selected
+for `tiro`:
+
+- **OrangeFox App Manager** (`FOX_ENABLE_APP_MANAGER=1`). It is the upstream
+  OrangeFox implementation. It is used only after `/data` is available/decrypted;
+  the project does not add a second package-database editor or alter the proven
+  FBE stack.
+- **Root Module Manager**. OrangeFox `fox_14.1` provides built-in management for
+  installed Magisk, APatch and KernelSU-family modules. Existing KernelSU,
+  KernelSU Next and SukiSU compatibility flags remain enabled. The separate
+  Magisk *installer addon* stays removed because module management does not
+  require bundling that installer.
+
+No other optional service features are enabled by this change.
+
+USB-OTG was already present in the known-good recovery configuration as
+`/usb_otg` in `twrp.flags`; it is left unchanged rather than patched blindly.
+
 ## Why the decryption stack is preserved
 
 The first source build deliberately preserves the KeyMint/Gatekeeper/QSEE/FBE
@@ -92,12 +112,13 @@ RedMagic9Pro-tiro-recovery-<commit>
 
 The artifact contains the flashable `recovery.img`.
 
-The hosted-runner build also targets a **16 GiB swapfile** immediately before
-compilation. To avoid trading an OOM for a disk-full failure, the swap helper
-keeps roughly 18 GiB free for Android build output and automatically reduces
-the swap size when required. During `mka`, a 60-second heartbeat reports RAM,
-swap, disk usage and active Soong/Ninja processes so long dependency-graph
-phases do not look like silent hangs.
+The hosted-runner build targets **16 GiB total active swap** immediately before
+compilation. Existing runner swap is preserved and only the missing capacity is
+added. To avoid trading an OOM for a disk-full failure, the helper keeps roughly
+18 GiB free for Android build output and reduces only the additional swap when
+required. During `mka`, a 60-second heartbeat reports RAM, swap, disk usage and
+active Soong/Ninja processes so long dependency-graph phases do not look like
+silent hangs.
 
 A tag matching `v*` also starts a build automatically.
 
@@ -189,3 +210,11 @@ copied from upstream projects retain their original notices. The compatibility
 blob snapshot includes vendor/OEM binaries whose redistribution may be governed
 by their respective owners' terms; they are not relicensed by this repository.
 See `THIRD_PARTY.md`.
+
+
+### CI swap teardown
+
+The GitHub-hosted runner intentionally leaves the build swapfile enabled after `mka`. Disabling a heavily used 16 GiB swapfile with `swapoff` can stall a memory-constrained runner while pages are faulted back into RAM. GitHub-hosted runners are ephemeral, so the swapfile is discarded automatically when the runner is destroyed. Only the heartbeat process group is stopped explicitly after compilation.
+
+
+CI memory note: the GitHub Actions workflow targets **16 GiB total active swap**. If the runner already provides a small swapfile, the workflow adds only the missing capacity without disabling the existing swap.

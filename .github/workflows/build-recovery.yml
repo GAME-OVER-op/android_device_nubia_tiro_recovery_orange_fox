@@ -100,6 +100,7 @@ jobs:
           export TIRO_BUILD_VERSION="${GITHUB_RUN_NUMBER}"
           scripts/prepare_source.sh
           grep -n "TIRO_INPUT_FF_HAPTICS" "$FOX_SRC/bootable/recovery/minuitwrp/events.cpp"
+          grep -n "TIRO_GUI_BUTTON_DIAGNOSTICS" "$FOX_SRC/bootable/recovery/gui/button.cpp"
           if grep -q 'AServiceManager_getService(kVibratorInstance.c_str())' "$FOX_SRC/bootable/recovery/minuitwrp/events.cpp"; then
             echo "Blocking vibrator service lookup survived patch" >&2
             exit 1
@@ -167,21 +168,34 @@ jobs:
           # Soong can spend a long time generating the dependency graph with
           # no console output. Keep a lightweight heartbeat alive so CI logs show
           # CPU/RAM/swap/disk pressure and whether Soong/Ninja are still running.
-          "$GITHUB_WORKSPACE/scripts/build_heartbeat.sh" 60 &
+          # Run the heartbeat in its own session/process group so every child
+          # (including a pending sleep) can be stopped deterministically.
+          setsid "$GITHUB_WORKSPACE/scripts/build_heartbeat.sh" 60 &
           HEARTBEAT_PID=$!
-          cleanup_build_resources() {
-            kill "$HEARTBEAT_PID" 2>/dev/null || true
+          cleanup_build_monitor() {
+            kill -TERM -- "-$HEARTBEAT_PID" 2>/dev/null || true
+            # Never let monitor cleanup keep the Actions step alive.
+            for _ in 1 2 3 4 5; do
+              kill -0 "$HEARTBEAT_PID" 2>/dev/null || break
+              sleep 1
+            done
+            kill -KILL -- "-$HEARTBEAT_PID" 2>/dev/null || true
             wait "$HEARTBEAT_PID" 2>/dev/null || true
-            # Reclaim swapfile disk as soon as compilation ends.
-            sudo swapoff /swapfile 2>/dev/null || true
-            sudo rm -f /swapfile 2>/dev/null || true
           }
-          trap cleanup_build_resources EXIT INT TERM
+          trap cleanup_build_monitor EXIT INT TERM
 
           mka -j"${BUILD_JOBS}" adbd recoveryimage
 
-          cleanup_build_resources
+          cleanup_build_monitor
           trap - EXIT INT TERM
+
+          # IMPORTANT: Do not swapoff a large CI swapfile here. On a memory-
+          # constrained hosted runner, swapoff must fault every swapped page back
+          # into RAM and can thrash for a very long time after a successful build.
+          # The runner is ephemeral, so leaving /swapfile active until runner
+          # teardown is both safe and faster.
+          echo "Build finished; leaving CI swap enabled until runner teardown."
+          swapon --show || true
 
       - name: Verify and stage artifacts
         shell: bash
