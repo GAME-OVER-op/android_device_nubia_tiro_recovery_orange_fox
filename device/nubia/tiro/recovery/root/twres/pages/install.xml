@@ -726,23 +726,23 @@
 
 			<button style="btn_raised_s">
 				<placement x="40" y="%row_btn1_y%"/>
-				<text>{@wipe_cache_btn}</text>
+				<image resource="btn_raised_s"/>
+				<text>{@wipe_dalvik_btn=Wipe Dalvik}</text>
 				<action function="disableled"/>
 				<action function="set">tw_back=flash_done</action>
 				<action function="set">tw_action=wipe</action>
-				<action function="set">tw_action_param=/cache</action>
-				<action function="set">tw_has_action2=1</action>
-				<action function="set">tw_action2=wipe</action>
-				<action function="set">tw_action2_param=dalvik</action>
-				<action function="set">tw_text1={@wipe_cache_dalvik_confirm}</action>
-				<action function="set">tw_action_text1={@wiping_cache_dalvik}</action>
-				<action function="set">tw_complete_text1={@wipe_cache_dalvik_complete}</action>
+				<action function="set">tw_action_param=dalvik</action>
+				<action function="set">tw_has_action2=0</action>
+				<action function="set">tw_text1={@wipe_dalvik_confirm=Wipe Dalvik?}</action>
+				<action function="set">tw_action_text1={@wiping_cache_dalvik=Wiping Dalvik...}</action>
+				<action function="set">tw_complete_text1={@wipe_dalvik_complete=Dalvik Wipe Complete}</action>
 				<action function="set">tw_slider_text={@swipe_wipe}</action>
 				<action function="page">confirm_action</action>
 			</button>
 
 			<button style="btn_raised_s">
 				<placement x="380" y="%row_btn1_y%"/>
+				<image resource="btn_raised_s"/>
 				<text>{@reboot_recovery_btn}</text>
 				<action function="set">tw_back=main</action>
 				<action function="set">tw_action_param=recovery</action>
@@ -752,6 +752,7 @@
 			<button style="btn_raised_s_hl">
 				<condition var1="tw_reboot_system" var2="1"/>
 				<placement x="720" y="%row_btn1_y%"/>
+				<image resource="btn_raised_s_hl"/>
 				<text>{@reboot_system_btn}</text>
 				<action function="set">tw_back=main</action>
 				<action function="set">tw_action_param=system</action>
@@ -866,23 +867,23 @@
 
 			<button style="btn_raised_s">
 				<placement x="40" y="%row_btn1_y%"/>
-				<text>{@wipe_cache_btn}</text>
+				<image resource="btn_raised_s"/>
+				<text>{@wipe_dalvik_btn=Wipe Dalvik}</text>
 				<action function="disableled"/>
 				<action function="set">tw_back=flash_done</action>
 				<action function="set">tw_action=wipe</action>
-				<action function="set">tw_action_param=/cache</action>
-				<action function="set">tw_has_action2=1</action>
-				<action function="set">tw_action2=wipe</action>
-				<action function="set">tw_action2_param=dalvik</action>
-				<action function="set">tw_text1={@wipe_cache_dalvik_confirm}</action>
-				<action function="set">tw_action_text1={@wiping_cache_dalvik}</action>
-				<action function="set">tw_complete_text1={@wipe_cache_dalvik_complete}</action>
+				<action function="set">tw_action_param=dalvik</action>
+				<action function="set">tw_has_action2=0</action>
+				<action function="set">tw_text1={@wipe_dalvik_confirm=Wipe Dalvik?}</action>
+				<action function="set">tw_action_text1={@wiping_cache_dalvik=Wiping Dalvik...}</action>
+				<action function="set">tw_complete_text1={@wipe_dalvik_complete=Dalvik Wipe Complete}</action>
 				<action function="set">tw_slider_text={@swipe_wipe}</action>
 				<action function="page">confirm_action</action>
 			</button>
 
 			<button style="btn_raised_s">
 				<placement x="380" y="%row_btn1_y%"/>
+				<image resource="btn_raised_s"/>
 				<text>{@reboot_recovery_btn}</text>
 				<action function="set">tw_back=main</action>
 				<action function="set">tw_action_param=recovery</action>
@@ -892,6 +893,7 @@
 			<button style="btn_raised_s_hl">
 				<condition var1="tw_reboot_system" var2="1"/>
 				<placement x="720" y="%row_btn1_y%"/>
+				<image resource="btn_raised_s_hl"/>
 				<text>{@reboot_system_btn}</text>
 				<action function="set">tw_back=main</action>
 				<action function="set">tw_action_param=system</action>

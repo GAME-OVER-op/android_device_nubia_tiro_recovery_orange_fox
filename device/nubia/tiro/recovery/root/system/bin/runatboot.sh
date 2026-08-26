@@ -14,9 +14,9 @@ quit() {
 load_drivers() {
 	local path1=/lib/modules;
 	local path2=/vendor/lib/modules/1.1;
-        local modules="adsp_loader_dlkm gpr_dlkm nt38771_touch panel_event_notifier pdr_interface \
+        local modules="adsp_loader_dlkm gpr_dlkm panel_event_notifier pdr_interface \
                        q6_notifier_dlkm q6_pdr_dlkm qcom_glink qcom_glink_smem qcom_pil_info qcom_q6v5 qcom_q6v5_pas qcom_ramdump \
-                       qcom_smd qcom_sysmon qmi_helpers rproc_qcom_common si_haptic snd_event_dlkm spf_core_dlkm xiaomi_touch"
+                       qcom_smd qcom_sysmon qmi_helpers rproc_qcom_common snd_event_dlkm spf_core_dlkm"
 
 	# loop through the modules
 	for i in $modules; do

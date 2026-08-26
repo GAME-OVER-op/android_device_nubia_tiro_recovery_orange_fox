@@ -175,3 +175,15 @@ E:No image resource or fill specified for button [TIRO_GUI_BUTTON_DIAGNOSTICS]: 
 The warning is non-fatal.  Capture the full lines from `/tmp/recovery.log` (or
 `adb shell cat /tmp/recovery.log`) after boot.  Once the exact theme elements
 are known, fix those XML entries rather than suppressing the warning globally.
+
+## Resolved: `No image resource or fill specified for button`
+
+On-device diagnostics identified six affected controls, all on the `flash_done`
+and `flash_image_done` pages. They used `btn_raised_s` / `btn_raised_s_hl`
+styles, but the button constructor did not resolve the inherited image early
+enough to obtain a render rectangle.
+
+The final `tiro` tree explicitly supplies the existing OrangeFox shape resource
+on each of those six buttons. The diagnostic source patch is intentionally kept
+as a safety net: if another malformed button is introduced later, the log will
+still identify its style, placement, action and condition.

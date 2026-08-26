@@ -66,4 +66,49 @@ if [[ -n "$PRODUCT_OUT" ]]; then
     exit 1
   fi
   echo "Runtime profile check: SDK 34 / first API 34 / board first API 34"
+
+  INSTALL_XML="$PRODUCT_OUT/recovery/root/twres/pages/install.xml"
+  IMAGES_XML="$PRODUCT_OUT/recovery/root/twres/resources/images.xml"
+  if [[ ! -f "$INSTALL_XML" ]]; then
+    echo "ERROR: built install.xml not found" >&2
+    exit 1
+  fi
+  NORMAL_BG_COUNT="$(grep -Fc '<image resource="btn_raised_s"/>' "$INSTALL_XML" || true)"
+  HILITE_BG_COUNT="$(grep -Fc '<image resource="btn_raised_s_hl"/>' "$INSTALL_XML" || true)"
+  if [[ "$NORMAL_BG_COUNT" != "4" || "$HILITE_BG_COUNT" != "2" ]]; then
+    echo "ERROR: post-flash buttons do not have all six explicit backgrounds" >&2
+    echo "  normal=$NORMAL_BG_COUNT highlighted=$HILITE_BG_COUNT" >&2
+    exit 1
+  fi
+  if grep -Fq 'tw_action_param=/cache' "$INSTALL_XML"; then
+    echo "ERROR: post-flash UI still tries to wipe nonexistent /cache" >&2
+    exit 1
+  fi
+  if [[ -f "$IMAGES_XML" ]]; then
+    grep -Fq 'shape name="btn_raised_s"' "$IMAGES_XML" || { echo "ERROR: btn_raised_s resource missing" >&2; exit 1; }
+    grep -Fq 'shape name="btn_raised_s_hl"' "$IMAGES_XML" || { echo "ERROR: btn_raised_s_hl resource missing" >&2; exit 1; }
+  else
+    echo "WARNING: built theme resource registry not found for shape verification" >&2
+  fi
+  echo "GUI check: six post-flash buttons have explicit visible backgrounds"
+
+  RECOVERY_FSTAB="$PRODUCT_OUT/recovery/root/system/etc/recovery.fstab"
+  TWRP_FLAGS="$PRODUCT_OUT/recovery/root/system/etc/twrp.flags"
+  for f in "$RECOVERY_FSTAB" "$TWRP_FLAGS"; do
+    if [[ -f "$f" ]] && grep -Eq '/cache|by-name/rescue' "$f"; then
+      echo "ERROR: stale rescue/cache mapping survived into built ramdisk: $f" >&2
+      exit 1
+    fi
+  done
+  echo "Cache check: no fake rescue/cache partition; logs can fall back to /data"
+
+  RUNATBOOT="$PRODUCT_OUT/recovery/root/system/bin/runatboot.sh"
+  if [[ -f "$RUNATBOOT" ]] && grep -Eq 'nt38771_touch|si_haptic|xiaomi_touch' "$RUNATBOOT"; then
+    echo "ERROR: incompatible Xiaomi modules survived into runatboot.sh" >&2
+    exit 1
+  fi
+  for mod in nt38771_touch.ko si_haptic.ko xiaomi_touch.ko; do
+    [[ ! -e "$PRODUCT_OUT/recovery/root/vendor/lib/modules/1.1/$mod" ]] || { echo "ERROR: incompatible module still bundled: $mod" >&2; exit 1; }
+  done
+  echo "Module check: incompatible Xiaomi touch/haptic modules removed"
 fi

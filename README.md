@@ -218,3 +218,10 @@ The GitHub-hosted runner intentionally leaves the build swapfile enabled after `
 
 
 CI memory note: the GitHub Actions workflow targets **16 GiB total active swap**. If the runner already provides a small swapfile, the workflow adds only the missing capacity without disabling the existing swap.
+
+## Final device cleanup
+
+The validated Red Magic build includes the final on-device cleanup described in
+[`docs/FINAL_CLEANUP.md`](docs/FINAL_CLEANUP.md): visible post-flash buttons,
+A/B-appropriate Dalvik wipe, `/data` log fallback instead of the invalid Xiaomi
+`rescue` cache mapping, and removal of three incompatible Xiaomi kernel modules.

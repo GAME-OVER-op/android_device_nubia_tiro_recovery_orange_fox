@@ -141,6 +141,52 @@ if "patch_gui_button_logging.py" not in prepare_source:
 if 'grep -n "TIRO_GUI_BUTTON_DIAGNOSTICS"' not in workflow:
     errors.append("GitHub workflow does not verify GUI button diagnostics")
 
+# Final Red Magic cleanup. The fox_14.1 GUIButton constructor only derives its
+# render rectangle from a directly resolved <image> or <fill>. The inherited
+# btn_raised_s styles in the imported theme did not resolve early enough for six
+# post-flash buttons, leaving them with a zero-sized hit/render area and emitting
+# "No image resource or fill specified for button". Keep explicit backgrounds.
+install_xml = (D / "recovery/root/twres/pages/install.xml").read_text()
+if install_xml.count('<image resource="btn_raised_s"/>') != 4:
+    errors.append("install.xml must contain four explicit btn_raised_s backgrounds")
+if install_xml.count('<image resource="btn_raised_s_hl"/>') != 2:
+    errors.append("install.xml must contain two explicit btn_raised_s_hl backgrounds")
+if 'tw_action_param=/cache' in install_xml:
+    errors.append("A/B post-flash page must not try to wipe the nonexistent /cache partition")
+if install_xml.count('tw_action_param=dalvik') < 2:
+    errors.append("both post-flash completion pages must offer a Dalvik wipe")
+
+# Red Magic has no Xiaomi-style rescue-as-cache partition. Without a /cache
+# partition OrangeFox get_log_dir() falls back to /data, which is the correct
+# persistent log location on this decrypted A/B device.
+for rel in ("recovery/root/system/etc/recovery.fstab", "recovery/root/system/etc/twrp.flags"):
+    text = (D / rel).read_text()
+    if '/cache' in text or 'by-name/rescue' in text:
+        errors.append(f"stale Xiaomi cache/rescue mapping remains in {rel}")
+
+# Prove that recovery.fstab differs from the known-good working file only by
+# removal of the invalid rescue -> /cache row; all FBE/decrypt mount data stays
+# byte-for-byte identical after normalisation.
+ref_fstab = ROOT / "reference/KNOWN_GOOD_RECOVERY_FSTAB.txt"
+if not ref_fstab.is_file():
+    errors.append("missing reference/KNOWN_GOOD_RECOVERY_FSTAB.txt")
+else:
+    def without_cache_row(text: str) -> str:
+        return "\n".join(ln for ln in text.splitlines() if not ('/cache' in ln and 'by-name/rescue' in ln)).strip()
+    current = (D / "recovery/root/system/etc/recovery.fstab").read_text()
+    if without_cache_row(ref_fstab.read_text()) != current.strip():
+        errors.append("recovery.fstab changed beyond the intentional rescue/cache removal")
+
+# These three Xiaomi modules produced Exec format error on the Red Magic kernel.
+# Native Goodix/input and Awinic FF haptics are already confirmed working.
+forbidden_modules = ("nt38771_touch", "si_haptic", "xiaomi_touch")
+runatboot = (D / "recovery/root/system/bin/runatboot.sh").read_text()
+for mod in forbidden_modules:
+    if mod in runatboot or f"{mod}.ko" in board:
+        errors.append(f"incompatible Xiaomi module is still requested: {mod}")
+    if (D / "recovery/root/vendor/lib/modules/1.1" / f"{mod}.ko").exists():
+        errors.append(f"incompatible Xiaomi module is still bundled: {mod}.ko")
+
 vendorsetup = (D / "vendorsetup.sh").read_text()
 if 'export FOX_MAINTAINER_PATCH_VERSION="$TIRO_PATCH_VERSION"' not in vendorsetup:
     errors.append("vendorsetup must export normalized numeric FOX_MAINTAINER_PATCH_VERSION")
@@ -227,7 +273,6 @@ critical_decrypt = [
     "vendor/lib64/libqtikeymint.so",
     "vendor/lib64/libQSEEComAPI.so",
     "vendor/bin/prepdecrypt.sh",
-    "system/etc/recovery.fstab",
     "init.recovery.qcom.rc",
 ]
 for rel in critical_decrypt:
@@ -254,7 +299,9 @@ print("  haptics: enabled via direct input FF patch, sysfs fallback")
 print("  source profile: OrangeFox fox_14.1 / Android 14 / SDK 34")
 print("  CI memory: 16 GiB total active swap target + 60 s heartbeat; preserves existing runner swap; no post-build swapoff")
 print("  GitHub JS actions: checkout@v6 + upload-artifact@v6 / Node.js 24")
-print("  decrypt compatibility stack: byte-identical to known-good ramdisk")
+print("  decrypt compatibility stack: critical binaries byte-identical; fstab identical except invalid cache mapping removal")
 print("  OrangeFox App Manager: enabled")
-print("  GUI button warning diagnostics: enabled (style/placement/action/condition)")
+print("  GUI post-flash buttons: explicit visible backgrounds; diagnostics retained as safety net")
+print("  cache handling: no fake rescue/cache partition; OrangeFox persistent logs fall back to /data")
+print("  startup modules: incompatible Xiaomi touch/haptic modules removed")
 print("  root modules: OrangeFox fox_14.1 built-in manager; Magisk/APatch/KernelSU family")

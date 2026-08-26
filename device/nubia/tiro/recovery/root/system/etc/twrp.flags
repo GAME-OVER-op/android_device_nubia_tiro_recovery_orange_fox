@@ -8,7 +8,6 @@
 /metadata              f2fs    /dev/block/bootdevice/by-name/metadata                             flags=display="Metadata";backup=1;wrappedkey
 
 # Other partitions
-/cache                 ext4    /dev/block/bootdevice/by-name/rescue                               flags=display="Cache";formattable;wipeduringfactoryreset
 /misc                  emmc    /dev/block/bootdevice/by-name/misc
 
 # Boot
