@@ -40,6 +40,7 @@ for rel in [
     "reference/KNOWN_GOOD_RUNTIME_PROFILE.txt",
     "scripts/setup_ci_swap.sh",
     "scripts/build_heartbeat.sh",
+    "scripts/patch_theme_button_resources.py",
 ]:
     if not (ROOT / rel).is_file():
         errors.append(f"missing: {rel}")
@@ -140,6 +141,19 @@ if "patch_gui_button_logging.py" not in prepare_source:
     errors.append("prepare_source.sh does not apply GUI button diagnostics")
 if 'grep -n "TIRO_GUI_BUTTON_DIAGNOSTICS"' not in workflow:
     errors.append("GitHub workflow does not verify GUI button diagnostics")
+
+theme_patch = ROOT / "scripts/patch_theme_button_resources.py"
+if not theme_patch.is_file():
+    errors.append("OrangeFox compact-button resource patcher is missing")
+else:
+    theme_patch_text = theme_patch.read_text()
+    for expected in ("btn_raised_s", "btn_raised_s_hl", "TIRO_POSTFLASH_BUTTON_SHAPES"):
+        if expected not in theme_patch_text:
+            errors.append(f"theme resource patcher missing marker/resource: {expected}")
+if "patch_theme_button_resources.py" not in prepare_source:
+    errors.append("prepare_source.sh does not ensure compact post-flash button resources")
+if 'patch_theme_button_resources.py" --check "$FOX_SRC"' not in workflow:
+    errors.append("GitHub workflow does not verify patched OrangeFox button resources")
 
 # Final Red Magic cleanup. The fox_14.1 GUIButton constructor only derives its
 # render rectangle from a directly resolved <image> or <fill>. The inherited

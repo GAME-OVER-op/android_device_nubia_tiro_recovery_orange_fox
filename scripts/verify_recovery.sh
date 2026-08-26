@@ -85,8 +85,12 @@ if [[ -n "$PRODUCT_OUT" ]]; then
     exit 1
   fi
   if [[ -f "$IMAGES_XML" ]]; then
-    grep -Fq 'shape name="btn_raised_s"' "$IMAGES_XML" || { echo "ERROR: btn_raised_s resource missing" >&2; exit 1; }
-    grep -Fq 'shape name="btn_raised_s_hl"' "$IMAGES_XML" || { echo "ERROR: btn_raised_s_hl resource missing" >&2; exit 1; }
+    # The active OrangeFox theme may represent these as a <shape> or another
+    # named GUI resource.  What matters to <image resource=...> is that the
+    # resource name exists; source preparation adds the known-good shape form
+    # when fox_14.1 does not provide one itself.
+    grep -Eq "name=['\"]btn_raised_s['\"]" "$IMAGES_XML" || { echo "ERROR: btn_raised_s resource missing" >&2; exit 1; }
+    grep -Eq "name=['\"]btn_raised_s_hl['\"]" "$IMAGES_XML" || { echo "ERROR: btn_raised_s_hl resource missing" >&2; exit 1; }
   else
     echo "WARNING: built theme resource registry not found for shape verification" >&2
   fi

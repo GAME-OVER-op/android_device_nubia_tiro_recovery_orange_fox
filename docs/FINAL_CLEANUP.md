@@ -50,3 +50,16 @@ haptics.
 
 No KeyMint, Gatekeeper, QSEE, FBE/decryption, App Manager or Root Module Manager
 components were changed by this cleanup.
+
+## fox_14.1 compact post-flash button resource guard
+
+The tiro install-page overlay explicitly uses `btn_raised_s` and
+`btn_raised_s_hl`.  The known-good ramdisk defines both as OrangeFox shapes,
+but a synced fox_14.1 theme snapshot can omit one or both declarations from the
+resource registry copied into `PRODUCT_OUT`.
+
+`prepare_source.sh` now runs `patch_theme_button_resources.py`.  It locates the
+current OrangeFox theme registry and adds only the missing compact shapes.  It
+does **not** replace the current theme with the older known-good `images.xml`.
+The CI verifies the prepared source before compiling and `verify_recovery.sh`
+checks that the built `twres/resources/images.xml` contains both resource names.
