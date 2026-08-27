@@ -169,6 +169,17 @@ if "patch_theme_button_resources.py" not in prepare_source:
     errors.append("prepare_source.sh does not ensure compact post-flash button resources")
 if "patch_dalvik_language_resources.py" not in prepare_source:
     errors.append("prepare_source.sh does not install Tiro Dalvik-only localization resources")
+
+unused_patch = ROOT / "scripts/patch_unused_recovery_services.py"
+if not unused_patch.is_file():
+    errors.append("minimal unused-service recovery patcher is missing")
+else:
+    unused_text = unused_patch.read_text()
+    for marker in ("se_omapi", "vendor.secure_element", "vendor.keymint-strongbox", "remoteproc0", "boot_adsp"):
+        if marker not in unused_text:
+            errors.append(f"unused-service patcher missing required marker: {marker}")
+if "patch_unused_recovery_services.py" not in prepare_source:
+    errors.append("prepare_source.sh does not disable proven-broken recovery-only services")
 if 'patch_theme_button_resources.py" --check "$FOX_SRC"' not in workflow:
     errors.append("GitHub workflow does not verify patched OrangeFox button resources")
 

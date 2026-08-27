@@ -14,6 +14,7 @@ python3 "$ROOT/scripts/patch_haptics.py" "$FOX_SRC/bootable/recovery/minuitwrp/e
 python3 "$ROOT/scripts/patch_gui_button_logging.py" "$FOX_SRC/bootable/recovery/gui/button.cpp"
 python3 "$ROOT/scripts/patch_theme_button_resources.py" "$FOX_SRC"
 python3 "$ROOT/scripts/patch_dalvik_language_resources.py" "$FOX_SRC"
+python3 "$ROOT/scripts/patch_unused_recovery_services.py" "$FOX_SRC/device/nubia/tiro/recovery/root"
 
 # Clean stale minuitwrp/recovery-root outputs. Incremental builds can otherwise
 # retain an older libminuitwrp.so in the ramdisk even when source changed.

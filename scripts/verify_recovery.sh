@@ -167,4 +167,23 @@ PY_GUI
     [[ ! -e "$PRODUCT_OUT/recovery/root/vendor/lib/modules/1.1/$mod" ]] || { echo "ERROR: incompatible module still bundled: $mod" >&2; exit 1; }
   done
   echo "Module check: incompatible Xiaomi touch/haptic modules removed"
+
+
+  # Minimal recovery-only cleanup: verify only the paths proven broken on Tiro.
+  SE_OMAPI_RC="$PRODUCT_OUT/recovery/root/system/etc/init/se_omapi.rc"
+  SE_RC="$PRODUCT_OUT/recovery/root/vendor/etc/init/android.hardware.secure_element-service.qti.rc"
+  SB_RC="$PRODUCT_OUT/recovery/root/vendor/etc/init/android.hardware.security.keymint-service.strongbox-nxp.rc"
+  SB_MANIFEST="$PRODUCT_OUT/recovery/root/vendor/etc/vintf/manifest/android.hardware.security.keymint3-service.strongbox-nxp.xml"
+  QCOM_RC="$PRODUCT_OUT/recovery/root/init.recovery.qcom.rc"
+  [[ -f "$SE_OMAPI_RC" ]] || { echo "ERROR: se_omapi recovery override missing" >&2; exit 1; }
+  grep -q 'disabled' "$SE_OMAPI_RC" || { echo "ERROR: se_omapi is not disabled" >&2; exit 1; }
+  ! grep -q 'start se_omapi' "$SE_OMAPI_RC" || { echo "ERROR: se_omapi still auto-starts" >&2; exit 1; }
+  [[ -f "$SE_RC" ]] && grep -q 'disabled' "$SE_RC" || { echo "ERROR: QTI Secure Element recovery HAL is not disabled" >&2; exit 1; }
+  [[ -f "$SB_RC" ]] && grep -q 'disabled' "$SB_RC" || { echo "ERROR: NXP StrongBox recovery HAL is not disabled" >&2; exit 1; }
+  ! grep -q 'interface aidl' "$SB_RC" || { echo "ERROR: StrongBox remains lazy-startable" >&2; exit 1; }
+  [[ ! -e "$SB_MANIFEST" ]] || { echo "ERROR: StrongBox VINTF interfaces are still advertised" >&2; exit 1; }
+  [[ -f "$QCOM_RC" ]] || { echo "ERROR: built init.recovery.qcom.rc missing" >&2; exit 1; }
+  ! grep -q 'write /sys/class/remoteproc/remoteproc0/state start' "$QCOM_RC" || { echo "ERROR: SPSS remoteproc0 is still force-started" >&2; exit 1; }
+  grep -q 'write /sys/kernel/boot_adsp/boot 1' "$QCOM_RC" || { echo "ERROR: required ADSP boot path was removed" >&2; exit 1; }
+  echo "Unused-service check: broken eSE/StrongBox/SPSS starts disabled; working decrypt/ADSP paths preserved"
 fi
