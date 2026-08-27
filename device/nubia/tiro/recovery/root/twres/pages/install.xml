@@ -726,7 +726,6 @@
 
 			<button style="btn_raised_s">
 				<placement x="40" y="%row_btn1_y%"/>
-				<image resource="btn_raised_s"/>
 				<text>{@wipe_dalvik_btn=Wipe Dalvik}</text>
 				<action function="disableled"/>
 				<action function="set">tw_back=flash_done</action>
@@ -742,7 +741,6 @@
 
 			<button style="btn_raised_s">
 				<placement x="380" y="%row_btn1_y%"/>
-				<image resource="btn_raised_s"/>
 				<text>{@reboot_recovery_btn}</text>
 				<action function="set">tw_back=main</action>
 				<action function="set">tw_action_param=recovery</action>
@@ -752,7 +750,6 @@
 			<button style="btn_raised_s_hl">
 				<condition var1="tw_reboot_system" var2="1"/>
 				<placement x="720" y="%row_btn1_y%"/>
-				<image resource="btn_raised_s_hl"/>
 				<text>{@reboot_system_btn}</text>
 				<action function="set">tw_back=main</action>
 				<action function="set">tw_action_param=system</action>
@@ -867,7 +864,6 @@
 
 			<button style="btn_raised_s">
 				<placement x="40" y="%row_btn1_y%"/>
-				<image resource="btn_raised_s"/>
 				<text>{@wipe_dalvik_btn=Wipe Dalvik}</text>
 				<action function="disableled"/>
 				<action function="set">tw_back=flash_done</action>
@@ -883,7 +879,6 @@
 
 			<button style="btn_raised_s">
 				<placement x="380" y="%row_btn1_y%"/>
-				<image resource="btn_raised_s"/>
 				<text>{@reboot_recovery_btn}</text>
 				<action function="set">tw_back=main</action>
 				<action function="set">tw_action_param=recovery</action>
@@ -893,7 +888,6 @@
 			<button style="btn_raised_s_hl">
 				<condition var1="tw_reboot_system" var2="1"/>
 				<placement x="720" y="%row_btn1_y%"/>
-				<image resource="btn_raised_s_hl"/>
 				<text>{@reboot_system_btn}</text>
 				<action function="set">tw_back=main</action>
 				<action function="set">tw_action_param=system</action>

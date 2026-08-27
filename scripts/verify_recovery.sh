@@ -69,32 +69,53 @@ if [[ -n "$PRODUCT_OUT" ]]; then
 
   INSTALL_XML="$PRODUCT_OUT/recovery/root/twres/pages/install.xml"
   IMAGES_XML="$PRODUCT_OUT/recovery/root/twres/resources/images.xml"
+  STYLES_XML="$PRODUCT_OUT/recovery/root/twres/resources/styles.xml"
   if [[ ! -f "$INSTALL_XML" ]]; then
     echo "ERROR: built install.xml not found" >&2
     exit 1
   fi
-  NORMAL_BG_COUNT="$(grep -Fc '<image resource="btn_raised_s"/>' "$INSTALL_XML" || true)"
-  HILITE_BG_COUNT="$(grep -Fc '<image resource="btn_raised_s_hl"/>' "$INSTALL_XML" || true)"
-  if [[ "$NORMAL_BG_COUNT" != "4" || "$HILITE_BG_COUNT" != "2" ]]; then
-    echo "ERROR: post-flash buttons do not have all six explicit backgrounds" >&2
-    echo "  normal=$NORMAL_BG_COUNT highlighted=$HILITE_BG_COUNT" >&2
+  NORMAL_STYLE_COUNT="$(grep -Fc '<button style="btn_raised_s">' "$INSTALL_XML" || true)"
+  HILITE_STYLE_COUNT="$(grep -Fc '<button style="btn_raised_s_hl">' "$INSTALL_XML" || true)"
+  if [[ "$NORMAL_STYLE_COUNT" != "4" || "$HILITE_STYLE_COUNT" != "2" ]]; then
+    echo "ERROR: post-flash buttons do not use all six native compact styles" >&2
+    echo "  normal=$NORMAL_STYLE_COUNT highlighted=$HILITE_STYLE_COUNT" >&2
     exit 1
   fi
+  if grep -Eq '<image resource="btn_raised_s(_hl)?"/>' "$INSTALL_XML"; then
+    echo "ERROR: post-flash buttons contain explicit child images; this hides labels on tiro" >&2
+    exit 1
+  fi
+  [[ "$(grep -Fc '<text>{@wipe_dalvik_btn=Wipe Dalvik}</text>' "$INSTALL_XML" || true)" == "2" ]] || { echo "ERROR: Dalvik post-flash labels missing" >&2; exit 1; }
+  [[ "$(grep -Fc '<text>{@reboot_recovery_btn}</text>' "$INSTALL_XML" || true)" == "2" ]] || { echo "ERROR: reboot-recovery labels missing" >&2; exit 1; }
+  [[ "$(grep -Fc '<text>{@reboot_system_btn}</text>' "$INSTALL_XML" || true)" == "2" ]] || { echo "ERROR: reboot-system labels missing" >&2; exit 1; }
   if grep -Fq 'tw_action_param=/cache' "$INSTALL_XML"; then
     echo "ERROR: post-flash UI still tries to wipe nonexistent /cache" >&2
     exit 1
   fi
-  if [[ -f "$IMAGES_XML" ]]; then
-    # The active OrangeFox theme may represent these as a <shape> or another
-    # named GUI resource.  What matters to <image resource=...> is that the
-    # resource name exists; source preparation adds the known-good shape form
-    # when fox_14.1 does not provide one itself.
-    grep -Eq "name=['\"]btn_raised_s['\"]" "$IMAGES_XML" || { echo "ERROR: btn_raised_s resource missing" >&2; exit 1; }
-    grep -Eq "name=['\"]btn_raised_s_hl['\"]" "$IMAGES_XML" || { echo "ERROR: btn_raised_s_hl resource missing" >&2; exit 1; }
-  else
-    echo "WARNING: built theme resource registry not found for shape verification" >&2
+  if [[ ! -f "$IMAGES_XML" || ! -f "$STYLES_XML" ]]; then
+    echo "ERROR: built OrangeFox theme registries missing" >&2
+    exit 1
   fi
-  echo "GUI check: six post-flash buttons have explicit visible backgrounds"
+  python3 - "$STYLES_XML" "$IMAGES_XML" <<'PY_GUI'
+import re, sys
+from pathlib import Path
+styles = Path(sys.argv[1]).read_text(encoding='utf-8', errors='strict')
+images = Path(sys.argv[2]).read_text(encoding='utf-8', errors='strict')
+for name, color in (("btn_raised_s", "%text%"), ("btn_raised_s_hl", "%text_hl_btn%")):
+    if not re.search(rf"\bname\s*=\s*['\"]{name}['\"]", images):
+        raise SystemExit(f"ERROR: {name} image/shape resource missing")
+    m = re.search(rf"<style\s+name\s*=\s*['\"]{name}['\"]\s*>(.*?)</style>", styles, re.S)
+    if not m:
+        raise SystemExit(f"ERROR: {name} style missing")
+    body = m.group(1)
+    if not re.search(r"<font\b[^>]*\bresource\s*=\s*['\"]Secondary['\"]", body):
+        raise SystemExit(f"ERROR: {name} style has no Secondary font")
+    if color not in body:
+        raise SystemExit(f"ERROR: {name} style has wrong/missing text color")
+    if not re.search(rf"<image\b[^>]*\bresource\s*=\s*['\"]{name}['\"]", body):
+        raise SystemExit(f"ERROR: {name} style does not reference its background resource")
+PY_GUI
+  echo "GUI check: six post-flash buttons use native style -> font/image -> shape chain"
 
   RECOVERY_FSTAB="$PRODUCT_OUT/recovery/root/system/etc/recovery.fstab"
   TWRP_FLAGS="$PRODUCT_OUT/recovery/root/system/etc/twrp.flags"

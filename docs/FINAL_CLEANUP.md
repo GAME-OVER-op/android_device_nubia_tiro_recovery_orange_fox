@@ -3,24 +3,37 @@
 This cleanup is based on the on-device recovery/logcat validation from the
 working `tiro` build.
 
-## Visible post-flash buttons
+## Visible post-flash buttons and labels
 
-OrangeFox `GUIButton` requires a directly resolved `<image>` or `<fill>` to
-obtain a non-zero render/touch rectangle. Six buttons on `flash_done` and
-`flash_image_done` inherited `btn_raised_s` / `btn_raised_s_hl`, but the
-background was not resolved by the constructor and produced:
+The known-good Red Magic ramdisk uses the native OrangeFox compact button
+styles `btn_raised_s` and `btn_raised_s_hl`. The style supplies both the font
+and the background image/shape.
+
+A synced fox_14.1 theme can miss one side of that style/resource chain and emit:
 
 ```
 E:No image resource or fill specified for button
 ```
 
-Each of those six buttons now declares its existing theme shape explicitly:
+An intermediate tiro workaround placed `<image resource=...>` directly inside
+the six buttons on `flash_done` and `flash_image_done`. That restored the button
+backgrounds on-device, but it also caused their labels to disappear.
 
-- 4 × `btn_raised_s`
-- 2 × `btn_raised_s_hl`
+The final fix keeps the page XML in the same native form as the known-good
+ramdisk:
 
-The appearance stays native OrangeFox; the buttons are now guaranteed to be
-visible and to have the intended 320 × `%btn_h%` hit area.
+- 4 × `style="btn_raised_s"`
+- 2 × `style="btn_raised_s_hl"`
+- no explicit child `<image>` on those buttons
+- the button `<text>` nodes remain intact
+
+`patch_theme_button_resources.py` now repairs both halves of the theme chain:
+
+- `styles.xml`: compact styles, `Secondary` font, native text colors, image reference
+- `images.xml`: matching compact shape resources
+
+This preserves the native OrangeFox drawing order so the background and label
+are both rendered.
 
 ## Cache on an A/B device
 
@@ -53,13 +66,13 @@ components were changed by this cleanup.
 
 ## fox_14.1 compact post-flash button resource guard
 
-The tiro install-page overlay explicitly uses `btn_raised_s` and
-`btn_raised_s_hl`.  The known-good ramdisk defines both as OrangeFox shapes,
-but a synced fox_14.1 theme snapshot can omit one or both declarations from the
-resource registry copied into `PRODUCT_OUT`.
+The tiro install-page overlay uses `btn_raised_s` and `btn_raised_s_hl`. The
+known-good ramdisk provides both complete style definitions and both matching
+shape resources. A synced fox_14.1 theme snapshot can omit or incompletely
+define either side of that chain.
 
-`prepare_source.sh` now runs `patch_theme_button_resources.py`.  It locates the
-current OrangeFox theme registry and adds only the missing compact shapes.  It
-does **not** replace the current theme with the older known-good `images.xml`.
-The CI verifies the prepared source before compiling and `verify_recovery.sh`
-checks that the built `twres/resources/images.xml` contains both resource names.
+`prepare_source.sh` runs `patch_theme_button_resources.py`. It repairs only the
+missing/incomplete compact style definitions and shape resources; it does **not**
+replace the current theme with an older full theme. CI checks the prepared
+source, and `verify_recovery.sh` validates the built style -> font/image ->
+shape chain plus the six button labels.

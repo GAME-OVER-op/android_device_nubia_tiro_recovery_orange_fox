@@ -147,7 +147,7 @@ if not theme_patch.is_file():
     errors.append("OrangeFox compact-button resource patcher is missing")
 else:
     theme_patch_text = theme_patch.read_text()
-    for expected in ("btn_raised_s", "btn_raised_s_hl", "TIRO_POSTFLASH_BUTTON_SHAPES"):
+    for expected in ("btn_raised_s", "btn_raised_s_hl", "TIRO_POSTFLASH_BUTTON_SHAPES", "TIRO_POSTFLASH_BUTTON_STYLES"):
         if expected not in theme_patch_text:
             errors.append(f"theme resource patcher missing marker/resource: {expected}")
 if "patch_theme_button_resources.py" not in prepare_source:
@@ -155,16 +155,24 @@ if "patch_theme_button_resources.py" not in prepare_source:
 if 'patch_theme_button_resources.py" --check "$FOX_SRC"' not in workflow:
     errors.append("GitHub workflow does not verify patched OrangeFox button resources")
 
-# Final Red Magic cleanup. The fox_14.1 GUIButton constructor only derives its
-# render rectangle from a directly resolved <image> or <fill>. The inherited
-# btn_raised_s styles in the imported theme did not resolve early enough for six
-# post-flash buttons, leaving them with a zero-sized hit/render area and emitting
-# "No image resource or fill specified for button". Keep explicit backgrounds.
+# Final Red Magic cleanup. Keep the post-flash buttons in the native OrangeFox
+# form: their style supplies BOTH font/text properties and the image resource.
+# A previous workaround added a child <image> to each button; that made the
+# background visible but covered/suppressed the labels on-device. Source prep
+# now repairs the style -> image -> shape chain instead.
 install_xml = (D / "recovery/root/twres/pages/install.xml").read_text()
-if install_xml.count('<image resource="btn_raised_s"/>') != 4:
-    errors.append("install.xml must contain four explicit btn_raised_s backgrounds")
-if install_xml.count('<image resource="btn_raised_s_hl"/>') != 2:
-    errors.append("install.xml must contain two explicit btn_raised_s_hl backgrounds")
+if install_xml.count('<button style="btn_raised_s">') != 4:
+    errors.append("install.xml must contain four native btn_raised_s post-flash buttons")
+if install_xml.count('<button style="btn_raised_s_hl">') != 2:
+    errors.append("install.xml must contain two native btn_raised_s_hl post-flash buttons")
+if '<image resource="btn_raised_s"/>' in install_xml or '<image resource="btn_raised_s_hl"/>' in install_xml:
+    errors.append("post-flash buttons must not contain explicit child images; background comes from style")
+if install_xml.count('<text>{@wipe_dalvik_btn=Wipe Dalvik}</text>') != 2:
+    errors.append("both post-flash pages must contain the Dalvik button label")
+if install_xml.count('<text>{@reboot_recovery_btn}</text>') != 2:
+    errors.append("both post-flash pages must contain the reboot-recovery label")
+if install_xml.count('<text>{@reboot_system_btn}</text>') != 2:
+    errors.append("both post-flash pages must contain the reboot-system label")
 if 'tw_action_param=/cache' in install_xml:
     errors.append("A/B post-flash page must not try to wipe the nonexistent /cache partition")
 if install_xml.count('tw_action_param=dalvik') < 2:
@@ -315,7 +323,7 @@ print("  CI memory: 16 GiB total active swap target + 60 s heartbeat; preserves 
 print("  GitHub JS actions: checkout@v6 + upload-artifact@v6 / Node.js 24")
 print("  decrypt compatibility stack: critical binaries byte-identical; fstab identical except invalid cache mapping removal")
 print("  OrangeFox App Manager: enabled")
-print("  GUI post-flash buttons: explicit visible backgrounds; diagnostics retained as safety net")
+print("  GUI post-flash buttons: native styled backgrounds + visible text path; diagnostics retained")
 print("  cache handling: no fake rescue/cache partition; OrangeFox persistent logs fall back to /data")
 print("  startup modules: incompatible Xiaomi touch/haptic modules removed")
 print("  root modules: OrangeFox fox_14.1 built-in manager; Magisk/APatch/KernelSU family")
