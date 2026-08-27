@@ -1,5 +1,5 @@
 on init
-    # Disabled on tiro: minuitwrp uses non-blocking Linux input force-feedback.
+    # Disabled on tiro: minuitwrp uses native Nubia/Awinic haptics without this Binder service.
     # Do not synchronously depend on the Xiaomi vibratorfeature Binder service.
 
 

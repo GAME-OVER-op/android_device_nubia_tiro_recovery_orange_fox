@@ -188,9 +188,10 @@ TW_HAS_EDL_MODE := true
 # Do NOT enable TW_NO_HAPTICS: vibration feedback is intentionally retained.
 # Do NOT enable the Xiaomi AIDL vibrator path here. On tiro it can synchronously
 # wait for a service which is not available in recovery, stalling every tap.
-# scripts/patch_haptics.py adds a direct Linux input force-feedback backend to
-# minuitwrp. Red Magic exposes qcom-hv-haptics with FF_CONSTANT support.
-# If input FF is unavailable, minuitwrp falls back to the existing sysfs paths.
+# scripts/patch_haptics.py prefers the native Nubia/Awinic continuous-mode
+# sysfs node, which does not depend on haptic_ram.bin. The awinic_haptic input
+# FF device is retained as a persistent-effect fallback, followed by generic
+# OrangeFox sysfs haptics.
 
 TW_USE_SERIALNO_PROPERTY_FOR_DEVICE_ID := true
 TW_LOAD_VENDOR_MODULES := "adsp_loader_dlkm.ko nxp-nci.ko phy-msm-m31-eusb2.ko phy-msm-snps-eusb2.ko phy-msm-ssusb-qmp.ko repeater-qti-pmic-eusb2.ko wcd_usbss_i2c.ko dwc3-msm.ko xhci-sideband.ko repeater.ko phy-generic.ko"

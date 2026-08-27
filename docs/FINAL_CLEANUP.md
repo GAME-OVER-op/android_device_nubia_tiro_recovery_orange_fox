@@ -58,8 +58,8 @@ The on-device log showed `Exec format error` for:
 - `xiaomi_touch.ko`
 
 They are no longer loaded or bundled. The working Red Magic paths remain:
-Goodix/input for touch and `awinic_haptic` via Linux input force-feedback for
-haptics.
+Goodix/input for touch and the native Nubia/Awinic continuous-mode sysfs path
+for primary haptics, with `awinic_haptic` input force-feedback as fallback.
 
 No KeyMint, Gatekeeper, QSEE, FBE/decryption, App Manager or Root Module Manager
 components were changed by this cleanup.

@@ -27,11 +27,19 @@ if [[ -n "$PRODUCT_OUT" ]]; then
     LIB="$PRODUCT_OUT/system/lib64/libminuitwrp.so"
   fi
   if [[ -f "$LIB" ]]; then
-    if strings "$LIB" | grep -Fq 'IVibrator/vibratorfeature'; then
+    if grep -aFq 'IVibrator/vibratorfeature' "$LIB"; then
       echo "ERROR: Xiaomi AIDL vibrator instance is still compiled into libminuitwrp.so" >&2
       exit 1
     fi
-    echo "Haptics check: no Xiaomi vibratorfeature instance in libminuitwrp.so"
+    if ! grep -aFq '/sys/class/timed_output/vibrator/cont' "$LIB"; then
+      echo "ERROR: native Tiro/Awinic continuous haptics backend missing from libminuitwrp.so" >&2
+      exit 1
+    fi
+    if ! grep -aFq 'TIRO: using firmware-independent Awinic continuous haptics' "$LIB"; then
+      echo "ERROR: Tiro continuous haptics marker missing from libminuitwrp.so" >&2
+      exit 1
+    fi
+    echo "Haptics check: native Awinic continuous backend present; Xiaomi blocking AIDL path absent"
   else
     echo "WARNING: libminuitwrp.so was not found for binary inspection" >&2
   fi

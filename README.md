@@ -38,7 +38,7 @@ build-info.txt
 | A/B recovery partition | Yes |
 | FBE metadata decryption | Enabled |
 | Fastbootd | Enabled |
-| Haptics | Enabled, direct Linux input FF with sysfs fallback |
+| Haptics | Enabled, native Nubia/Awinic continuous mode with persistent input-FF fallback |
 
 The empty kernel payload is intentional. The supplied known-good image also has
 no kernel in its recovery image. Recovery therefore continues to use the
@@ -59,13 +59,20 @@ service on every tap, producing the repeated delay.
 
 This project patches `minuitwrp/events.cpp` to:
 
-1. probe `/dev/input/event*` for a haptics force-feedback device;
-2. prefer `FF_CONSTANT`, which is exposed by `qcom-hv-haptics` on SM8650;
-3. play short vibration effects directly through `EVIOCSFF` / `EV_FF`;
-4. cache the haptics file descriptor after discovery;
-5. fall back to the existing sysfs vibrator paths if input FF is unavailable;
+1. prefer Tiro's native `/sys/class/timed_output/vibrator/cont` interface;
+2. stop the continuous effect with an asynchronous POSIX timer, so the GUI
+   thread never sleeps for the vibration duration;
+3. use the `awinic_haptic` input force-feedback device as a secondary backend;
+4. keep and update one persistent FF effect slot instead of deleting/recreating
+   it on every tap;
+5. fall back to the generic OrangeFox sysfs vibrator paths last;
 6. replace the blocking AIDL lookup with `AServiceManager_checkService()` as a
    safety net.
+
+The native `cont` path is deliberately first because Tiro's Nubia `haptic.ko`
+requests `haptic_ram.bin`, while the known-good recovery ramdisk does not carry
+that device-specific waveform blob. Continuous mode does not depend on that RAM
+firmware.
 
 Haptics are **not** disabled with `TW_NO_HAPTICS`.
 
@@ -188,7 +195,7 @@ done incrementally without risking `/data` decryption.
 ```text
 .github/workflows/build-recovery.yml   GitHub Actions build
 device/nubia/tiro/                     recovery device tree + compatibility blobs
-scripts/patch_haptics.py               non-blocking input-FF haptics source patch
+scripts/patch_haptics.py               native Nubia cont haptics + persistent input-FF fallback
 scripts/sync_fox.sh                    OrangeFox source synchronization
 scripts/prepare_source.sh              install tree + patch source
 scripts/build_local.sh                 local build entry point
@@ -225,3 +232,12 @@ The validated Red Magic build includes the final on-device cleanup described in
 [`docs/FINAL_CLEANUP.md`](docs/FINAL_CLEANUP.md): visible post-flash buttons,
 A/B-appropriate Dalvik wipe, `/data` log fallback instead of the invalid Xiaomi
 `rescue` cache mapping, and removal of three incompatible Xiaomi kernel modules.
+
+## Tiro haptics stability update
+
+Tiro's native `haptic.ko` requests `haptic_ram.bin`, which is absent from the
+known-good ramdisk. Recovery therefore prefers the firmware-independent Nubia
+continuous-mode node (`/sys/class/timed_output/vibrator/cont`) for short UI
+feedback. Input force-feedback remains a persistent-slot fallback. The project
+does not fake `haptic_ram.bin` from the Xiaomi `aw8697_haptic.bin` blob and does
+not restore the incompatible Xiaomi `.ko` modules. See `docs/HAPTICS_FIX.md`.

@@ -44,22 +44,30 @@ The output library must not be an old incrementally relinked copy.
 
 ## Haptics no longer delay the UI but do not vibrate
 
-Check whether the kernel exposes force feedback:
+Check the native Tiro path first:
 
 ```bash
-getevent -il /dev/input/event* | grep -A8 -i 'haptic\|vibra'
+ls -l /sys/class/timed_output/vibrator/cont
+/system/bin/tiro-haptics-debug.sh
 ```
 
-For the expected Qualcomm path, look for:
+A deliberate hardware test is available:
+
+```bash
+/system/bin/tiro-haptics-debug.sh --test
+```
+
+The expected input fallback is normally named:
 
 ```text
-Name="qcom-hv-haptics"
+awinic_haptic
 FF_CONSTANT
 ```
 
-If the node does not exist in the booted recovery environment, the next step is
-to determine whether the matching stock vendor_boot recovery module set is being
-loaded. Do not blindly insert modules built against a different kernel ABI.
+`haptic_ram.bin` errors can still appear because the genuine Tiro waveform blob
+is not bundled. The primary continuous-mode backend does not depend on it. Do
+not rename Xiaomi `aw8697_haptic.bin` to `haptic_ram.bin`, and do not restore
+`si_haptic.ko`/Xiaomi touch modules built against a different kernel ABI.
 
 ## /data decryption regresses
 

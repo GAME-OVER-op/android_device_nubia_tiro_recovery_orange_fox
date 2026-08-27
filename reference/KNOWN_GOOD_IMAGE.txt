@@ -22,6 +22,9 @@ Image layout extracted from the supplied working image:
 - Reference OS version field: 99.87.36
 - Reference OS patch field: 2127-12
 
-The five-second-per-tap defect is addressed in this project by bypassing the
-Xiaomi recovery AIDL vibrator service and using Linux input force-feedback
-(qcom-hv-haptics) directly from minuitwrp. Haptics remain enabled.
+The five-second-per-tap defect is addressed by bypassing the Xiaomi recovery
+AIDL vibrator service. Later Tiro runtime logs identified the actual native
+backend as Nubia `haptic.ko` / `awinic_haptic` (AW8692x), whose RAM firmware is
+not present in this reference ramdisk. The current project therefore uses the
+firmware-independent Nubia continuous-mode sysfs node first and persistent input
+force-feedback only as fallback. Haptics remain enabled.

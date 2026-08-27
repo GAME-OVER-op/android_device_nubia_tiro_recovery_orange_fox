@@ -54,6 +54,21 @@ for forbidden in (
     if forbidden in board:
         errors.append(f"blocking/disabled-haptics flag present: {forbidden}")
 
+# Tiro's native haptic_hv driver exposes a firmware-independent continuous mode.
+# Recovery must prefer it over FF_CONSTANT, because the latter enters AW_RAM_LOOP_MODE
+# and depends on haptic_ram.bin, which is not present in the known-good ramdisk.
+haptic_patcher = (ROOT / "scripts/patch_haptics.py").read_text()
+cont_call = haptic_patcher.find("tiro_vibrate_awinic_cont(timeout_ms)")
+ff_call = haptic_patcher.find("tiro_vibrate_input_ff(timeout_ms)")
+if "TIRO_AWINIC_CONT_HAPTICS" not in haptic_patcher:
+    errors.append("native Tiro/Awinic continuous haptics backend missing")
+if 'TIRO_AWINIC_CONT_FILE \"/sys/class/timed_output/vibrator/cont\"' not in haptic_patcher and '/sys/class/timed_output/vibrator/cont' not in haptic_patcher:
+    errors.append("native Tiro haptics cont sysfs path missing")
+if cont_call < 0 or ff_call < 0 or cont_call > ff_call:
+    errors.append("Tiro continuous haptics must run before input-FF fallback")
+if "effect.id = static_cast<__s16>(tiro_ff_effect_id);" not in haptic_patcher:
+    errors.append("input-FF fallback does not reuse its persistent effect slot")
+
 checks = {
     "BOARD_BOOT_HEADER_VERSION": "4",
     "BOARD_KERNEL_PAGESIZE": "4096",
@@ -317,7 +332,7 @@ print("  recovery partition: 100 MiB")
 print("  header: v4")
 print("  ramdisk: LZ4")
 print("  embedded kernel: excluded")
-print("  haptics: enabled via direct input FF patch, sysfs fallback")
+print("  haptics: native Nubia/Awinic continuous mode, persistent input-FF fallback")
 print("  source profile: OrangeFox fox_14.1 / Android 14 / SDK 34")
 print("  CI memory: 16 GiB total active swap target + 60 s heartbeat; preserves existing runner swap; no post-build swapoff")
 print("  GitHub JS actions: checkout@v6 + upload-artifact@v6 / Node.js 24")

@@ -14,8 +14,9 @@ Known-good recovery userspace
         |
         +-- replace only problematic haptics path
                      |
-                     +-- direct qcom-hv-haptics input FF
-                     +-- non-blocking fallback behavior
+                     +-- native Nubia/Awinic continuous sysfs mode
+                     +-- persistent awinic_haptic input FF fallback
+                     +-- non-blocking Binder safety behavior
 ```
 
 ## Recovery image
@@ -50,6 +51,9 @@ Gatekeeper/QSEE userspace and `prepdecrypt.sh` chain.
 ## Haptics
 
 The old Xiaomi AIDL haptics compile flags are intentionally absent. Haptics are
-not globally disabled. The patched generic minuitwrp backend discovers a Linux
-input FF haptics device and caches its fd. This keeps the GUI thread independent
-from vendor Binder service startup.
+not globally disabled. Runtime logs on Tiro show Nubia's `haptic.ko` registering
+`awinic_haptic`, while its `haptic_ram.bin` request fails in recovery. The
+patched minuitwrp path therefore prefers the firmware-independent continuous
+mode exposed at `/sys/class/timed_output/vibrator/cont`. A persistent input-FF
+effect remains the secondary backend. This keeps the GUI independent from both
+the missing waveform blob and vendor Binder service startup.

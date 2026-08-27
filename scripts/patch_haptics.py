@@ -7,12 +7,14 @@ every tap. This patch:
 
 1. Changes AIDL lookup from AServiceManager_getService() to the non-blocking
    AServiceManager_checkService() as a safety net.
-2. Adds a direct Linux input force-feedback backend.
-3. Uses the FF backend before legacy sysfs haptics in the generic path.
+2. Uses the native Nubia/Awinic continuous-mode sysfs node first. This path does
+   not depend on haptic_ram.bin and therefore remains deterministic in recovery.
+3. Keeps direct Linux input force-feedback as a secondary backend, with a
+   persistent effect slot rather than delete/recreate on every tap.
+4. Falls back to the existing generic sysfs paths last.
 
-The device BoardConfig intentionally does not enable AIDL haptics, so the normal
-runtime path is input FF -> sysfs fallback. qcom-hv-haptics on SM8650 exposes
-FF_CONSTANT and is the preferred target.
+The device BoardConfig intentionally does not enable AIDL haptics. On tiro the
+normal runtime order is Awinic continuous mode -> input FF -> generic sysfs.
 """
 
 from __future__ import annotations
@@ -25,13 +27,93 @@ MARKER = "TIRO_INPUT_FF_HAPTICS"
 
 HELPERS = r'''
 
-/* TIRO_INPUT_FF_HAPTICS
+#include <signal.h>
+#include <time.h>
+
+/* TIRO_INPUT_FF_HAPTICS / TIRO_AWINIC_CONT_HAPTICS
  *
- * Recovery only needs short UI feedback. Driving the kernel input FF device
- * directly avoids a synchronous dependency on a vendor Binder HAL. The fd is
- * discovered once and then cached. Failure is non-fatal and falls back to the
- * legacy sysfs path.
+ * The native Nubia haptic_hv driver exposes /sys/class/timed_output/vibrator/cont.
+ * Its continuous mode does not require haptic_ram.bin, unlike RAM/FF_CONSTANT
+ * playback in the AW8692x input framework. Recovery uses this path first and a
+ * POSIX timer to stop the effect without sleeping on the GUI thread.
+ *
+ * Input force-feedback remains a secondary backend for kernels that do not
+ * expose the Nubia sysfs node. Its single FF slot is kept and updated instead
+ * of being erased/recreated on every UI event.
  */
+#define TIRO_AWINIC_CONT_FILE "/sys/class/timed_output/vibrator/cont"
+
+static timer_t tiro_cont_timer = {};
+static bool tiro_cont_timer_ready = false;
+static bool tiro_cont_logged = false;
+
+static bool tiro_write_haptic_node(const char* path, const char* value) {
+    int fd = open(path, O_WRONLY | O_CLOEXEC);
+    if (fd < 0) return false;
+    const size_t len = strlen(value);
+    const ssize_t wrote = write(fd, value, len);
+    close(fd);
+    return wrote == static_cast<ssize_t>(len);
+}
+
+static void tiro_stop_awinic_cont(union sigval) {
+    (void)tiro_write_haptic_node(TIRO_AWINIC_CONT_FILE, "0");
+}
+
+static bool tiro_init_cont_timer() {
+    if (tiro_cont_timer_ready) return true;
+
+    struct sigevent sev = {};
+    sev.sigev_notify = SIGEV_THREAD;
+    sev.sigev_notify_function = tiro_stop_awinic_cont;
+    sev.sigev_value.sival_ptr = nullptr;
+
+    if (timer_create(CLOCK_MONOTONIC, &sev, &tiro_cont_timer) != 0) {
+        return false;
+    }
+    tiro_cont_timer_ready = true;
+    return true;
+}
+
+static bool tiro_vibrate_awinic_cont(int timeout_ms) {
+    if (timeout_ms <= 0 || access(TIRO_AWINIC_CONT_FILE, W_OK) != 0) return false;
+
+    const int duration_ms = timeout_ms > 1000 ? 1000 : timeout_ms;
+
+    // Nubia cont_store() stops the previous effect before starting continuous
+    // mode, so writing 1 also gives rapid repeated taps a clean retrigger.
+    if (!tiro_write_haptic_node(TIRO_AWINIC_CONT_FILE, "1")) return false;
+
+    // Android/bionic supports SIGEV_THREAD timers, but keep a small bounded
+    // synchronous stop as a recovery-only safety net if timer creation fails.
+    // Normal UI feedback is ~50 ms; never block the GUI for more than 60 ms.
+    if (!tiro_init_cont_timer()) {
+        const int sync_ms = duration_ms > 60 ? 60 : duration_ms;
+        usleep(static_cast<useconds_t>(sync_ms) * 1000U);
+        (void)tiro_write_haptic_node(TIRO_AWINIC_CONT_FILE, "0");
+        return true;
+    }
+
+    struct itimerspec its = {};
+    its.it_value.tv_sec = duration_ms / 1000;
+    its.it_value.tv_nsec = static_cast<long>(duration_ms % 1000) * 1000000L;
+    if (its.it_value.tv_sec == 0 && its.it_value.tv_nsec == 0) {
+        its.it_value.tv_nsec = 1000000L;
+    }
+
+    if (timer_settime(tiro_cont_timer, 0, &its, nullptr) != 0) {
+        (void)tiro_write_haptic_node(TIRO_AWINIC_CONT_FILE, "0");
+        return false;
+    }
+
+    if (!tiro_cont_logged) {
+        LOGI("TIRO: using firmware-independent Awinic continuous haptics at %s\n",
+             TIRO_AWINIC_CONT_FILE);
+        tiro_cont_logged = true;
+    }
+    return true;
+}
+
 static int tiro_ff_fd = -2;       // -2: probe/reprobe, >=0: cached device
 static int tiro_ff_effect_id = -1;
 static int tiro_ff_effect_type = -1;
@@ -94,7 +176,6 @@ static int tiro_open_input_ff_haptics() {
             continue;
         }
 
-        // qcom-hv-haptics exposes FF_CONSTANT. Prefer it when available.
         if (tiro_ff_test_bit(FF_CONSTANT, ff_bits)) {
             tiro_ff_effect_type = FF_CONSTANT;
         } else if (tiro_ff_test_bit(FF_RUMBLE, ff_bits)) {
@@ -111,32 +192,32 @@ static int tiro_open_input_ff_haptics() {
     }
 
     closedir(dir);
-    // Keep -2 when nothing matched so a haptics device that registers later
-    // can be discovered by a subsequent tap without blocking the UI thread.
     return tiro_ff_fd >= 0 ? tiro_ff_fd : -1;
 }
 
-static void tiro_stop_old_ff_effect(int fd) {
-    if (tiro_ff_effect_id < 0) return;
-
-    struct input_event stop = {};
-    stop.type = EV_FF;
-    stop.code = static_cast<__u16>(tiro_ff_effect_id);
-    stop.value = 0;
-    (void)write(fd, &stop, sizeof(stop));
-    (void)ioctl(fd, EVIOCRMFF, tiro_ff_effect_id);
+static void tiro_reset_ff_backend(int fd) {
+    if (tiro_ff_effect_id >= 0) {
+        struct input_event stop = {};
+        stop.type = EV_FF;
+        stop.code = static_cast<__u16>(tiro_ff_effect_id);
+        stop.value = 0;
+        (void)write(fd, &stop, sizeof(stop));
+        (void)ioctl(fd, EVIOCRMFF, tiro_ff_effect_id);
+    }
     tiro_ff_effect_id = -1;
+    tiro_ff_effect_type = -1;
+    if (fd >= 0) close(fd);
+    tiro_ff_fd = -2;
 }
 
 static bool tiro_vibrate_input_ff(int timeout_ms) {
     int fd = tiro_open_input_ff_haptics();
     if (fd < 0 || timeout_ms <= 0) return false;
 
-    tiro_stop_old_ff_effect(fd);
-
     struct ff_effect effect = {};
     effect.type = static_cast<__u16>(tiro_ff_effect_type);
-    effect.id = -1;
+    // Reuse the driver's only FF slot when one has already been allocated.
+    effect.id = static_cast<__s16>(tiro_ff_effect_id);
     effect.replay.length = static_cast<__u16>(timeout_ms > 1000 ? 1000 : timeout_ms);
     effect.replay.delay = 0;
 
@@ -151,27 +232,21 @@ static bool tiro_vibrate_input_ff(int timeout_ms) {
 
     if (ioctl(fd, EVIOCSFF, &effect) < 0) {
         LOGI("Input FF haptics: EVIOCSFF failed; using fallback haptics\n");
-        close(fd);
-        tiro_ff_fd = -2;
-        tiro_ff_effect_id = -1;
+        tiro_reset_ff_backend(fd);
         return false;
     }
+    tiro_ff_effect_id = effect.id;
 
     struct input_event play = {};
     play.type = EV_FF;
-    play.code = static_cast<__u16>(effect.id);
+    play.code = static_cast<__u16>(tiro_ff_effect_id);
     play.value = 1;
 
     if (write(fd, &play, sizeof(play)) != static_cast<ssize_t>(sizeof(play))) {
         LOGI("Input FF haptics: play failed; using fallback haptics\n");
-        (void)ioctl(fd, EVIOCRMFF, effect.id);
-        close(fd);
-        tiro_ff_fd = -2;
-        tiro_ff_effect_id = -1;
+        tiro_reset_ff_backend(fd);
         return false;
     }
-
-    tiro_ff_effect_id = effect.id;
     return true;
 }
 '''
@@ -210,6 +285,9 @@ def patch_file(path: Path) -> bool:
         write_to_file(VIBRATOR_TIMEOUT_FILE, tout);
 #endif'''
     replacement = '''#else
+    if (tiro_vibrate_awinic_cont(timeout_ms)) {
+        return 0;
+    }
     if (tiro_vibrate_input_ff(timeout_ms)) {
         return 0;
     }
@@ -227,7 +305,7 @@ def patch_file(path: Path) -> bool:
 
     if changed:
         path.write_text(text)
-        print(f"Applied non-blocking input-FF haptics patch: {path}")
+        print(f"Applied Tiro native-cont + persistent input-FF haptics patch: {path}")
     return changed
 
 
