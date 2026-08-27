@@ -1,5 +1,5 @@
 7af97c287f6516609b772e5ea9ec6f1365d4efa183bb8bf274dcf4727762ec21  ./.gitattributes
-6ba3e73ec8ecfdaef26be8525f18f61afdc3d66e81588a2ced8917aec2ba5d9a  ./.github/workflows/build-recovery.yml
+d879ec1cd78c90c5640daaf7fa03365eca7a2ecf0a323b2c29115f25a708ba98  ./.github/workflows/build-recovery.yml
 0210ad33176865d8a3000332f5010f6ae92b83c9f34d26ecef9afa475fc3373d  ./.gitignore
 2edf079f1420d24f490cb801e9b4ef04aa7b25e4d2e3c5eb9d166f95ecad9b41  ./LICENSE
 ea0f3e9f219da12029b4585d1d37e43f4ccafc0dcb67a4bca06e02fb42a96a33  ./NOTICE
@@ -74,7 +74,7 @@ b308fd2c22fb4e94f243dac6fd89d9738a26939e34098666adb6e0c770021ec5  ./device/nubia
 3079baf215591f13034a6d80c71e77b426503a52709e0851d9e59a0c89195100  ./device/nubia/tiro/recovery/root/system/lib64/libtouchreport_alg.so
 db1a7f9c9371365a68fceb704ed600f1721b6d9c57922251864d36ac79674bea  ./device/nubia/tiro/recovery/root/system/lib64/libtouchreport_hal.so
 a4d2458cfcebb44d00a31bc10336b3c4bc19e749d63ec2dcd4d869b7832e75af  ./device/nubia/tiro/recovery/root/system/lib64/libtouchreport_sensor.so
-ee375820913b066f20df275ed1523b2fdd4d50cea9f0f7d8c5f7b95f622043f1  ./device/nubia/tiro/recovery/root/twres/pages/install.xml
+595b75641fec7228ccf9928c6e67967ee78f27914e8d600f5e06498a2cd19ed4  ./device/nubia/tiro/recovery/root/twres/pages/install.xml
 61b2d6643ede5a859d6798ffd344b1f1ee8314757f113cd518a7bd550383b6af  ./device/nubia/tiro/recovery/root/vendor/bin/hw/android.hardware.gatekeeper-service-qti
 f7a49a7b3710cd83ab330c20bea97636a50b1daaeaa2b950202a7a36e5c39dde  ./device/nubia/tiro/recovery/root/vendor/bin/hw/android.hardware.health-service.qti_recovery
 70624ce27c42e76366b4e44544ad4954964017c9b70c074ff7e8d500646cfbf6  ./device/nubia/tiro/recovery/root/vendor/bin/hw/android.hardware.secure_element-service.qti
@@ -290,7 +290,7 @@ acf45660e59de56274f8a0a0da3ad6eef88cdabdd5316ac04990bc1f8debce2e  ./docs/ARCHITE
 4580a2bb86993cd93a6d37be4daca02d3eaaa7a0d0fc74941002c12c0b88ade8  ./docs/BUILD.md
 7b32dcb376e7f05d16aec8ac856d06c6e4d81f1f007554dc6433365b6ad64e5d  ./docs/CI.md
 274a20d3f90e7ed35be7444916d1f47563b3a0fe28064454b116cf31acbb5729  ./docs/FEATURES.md
-6db795be23b501aa7e14175a33b2d5fce93a57b7a8147c1e8d1f38ea9e2cf704  ./docs/FINAL_CLEANUP.md
+ddb3181316ce7773cb0ba2a4ebe778981c1c8bd21f0b8e9d8810db167f39f9f2  ./docs/FINAL_CLEANUP.md
 68d0d28d6b2e6772413af20544c0841d3765ebc375ca9bad85b22383987604ff  ./docs/HAPTICS_FIX.md
 42e61f198aff3b4640b35d9993c6e053ae07b20510b6063dd6db3579d16c5688  ./docs/TROUBLESHOOTING.md
 12aedbf4d6d0e653f0df858f740c6e6f77abd57ac875763d9df0bf32404945c9  ./patches/README.md
@@ -309,12 +309,13 @@ e5ab474f7f0e73454a561d2405e50212d88b96cb915293883af6c3cb41cd5303  ./reference/wo
 fb80d3e9c431854a4cac6cdd73226847ddea8584e81813a646e64969a0f5e430  ./scripts/build_local.sh
 d31e64a722970621113424133a83deea51baeacdd067a3ac1ae60c4b95254a1c  ./scripts/haptics_ff_smoketest.cpp
 e7bca08285c9d8266c7569ec72e319d67be650f745f85d2f74d8e4491959fc6d  ./scripts/make_build_info.sh
+1446d2791acac6614ea2706f72b618e892e14b24096b1af33154ed080d588be6  ./scripts/patch_dalvik_language_resources.py
 cd847e428ecbd705b839d4f138d1f407d723606d91eaa65847a09646eeed4597  ./scripts/patch_gui_button_logging.py
 a3a6dd00883ec674b6e847df819147a2f98726e6b7905e55aec16ef245da1684  ./scripts/patch_haptics.py
 491fe4dfd3ac16cf03ff9396dadf9129375fbc911ba90d24f150dd9f466f8a0f  ./scripts/patch_theme_button_resources.py
-4248da76b20ec2bad2f30639a5f02da3c6a085cdaccb8c2b00c9f1f9bc984c8b  ./scripts/prepare_source.sh
+79dfdf988444e813678364c3f01fff7055c40f5ada524ea0e3697c2b3a48c3b9  ./scripts/prepare_source.sh
 f381245a1eaf6bdcac094e49763ce1c10cc50cc7496f5131ebb475e9537232a0  ./scripts/setup_ci_swap.sh
 aa855b499082d448153a5360e73b1e93c5d91b6bd629fb077e6a635f15d05bf7  ./scripts/sync_fox.sh
 512f3078b0c7f22bdb1b1f211eb71572a3c3d535634bf15e6723b63ed842457b  ./scripts/test_haptics_patch.py
-39378005de4d2ca8f531c6129acebc3a8cfc1feda47409dd262c569123993883  ./scripts/validate_tree.py
-fc3b3ef9b45e8779ca35107c8d705144dfa5400cc7e503d8fcd2894f8003bd5c  ./scripts/verify_recovery.sh
+50cd31c5de2629930e2b397ec6d0859bb1325ded1cbd658dc514f5736c6fb2de  ./scripts/validate_tree.py
+cf63e8e6a68e096084f7663c526726607579ae3e7167b9af744b821a2b1618e1  ./scripts/verify_recovery.sh

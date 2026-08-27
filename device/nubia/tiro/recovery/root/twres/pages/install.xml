@@ -726,15 +726,15 @@
 
 			<button style="btn_raised_s">
 				<placement x="40" y="%row_btn1_y%"/>
-				<text>{@wipe_dalvik_btn=Wipe Dalvik}</text>
+				<text>{@tiro_wipe_dalvik_btn}</text>
 				<action function="disableled"/>
 				<action function="set">tw_back=flash_done</action>
 				<action function="set">tw_action=wipe</action>
 				<action function="set">tw_action_param=dalvik</action>
 				<action function="set">tw_has_action2=0</action>
-				<action function="set">tw_text1={@wipe_dalvik_confirm=Wipe Dalvik?}</action>
-				<action function="set">tw_action_text1={@wiping_cache_dalvik=Wiping Dalvik...}</action>
-				<action function="set">tw_complete_text1={@wipe_dalvik_complete=Dalvik Wipe Complete}</action>
+				<action function="set">tw_text1={@tiro_wipe_dalvik_confirm}</action>
+				<action function="set">tw_action_text1={@tiro_wiping_dalvik}</action>
+				<action function="set">tw_complete_text1={@tiro_wipe_dalvik_complete}</action>
 				<action function="set">tw_slider_text={@swipe_wipe}</action>
 				<action function="page">confirm_action</action>
 			</button>
@@ -864,15 +864,15 @@
 
 			<button style="btn_raised_s">
 				<placement x="40" y="%row_btn1_y%"/>
-				<text>{@wipe_dalvik_btn=Wipe Dalvik}</text>
+				<text>{@tiro_wipe_dalvik_btn}</text>
 				<action function="disableled"/>
 				<action function="set">tw_back=flash_done</action>
 				<action function="set">tw_action=wipe</action>
 				<action function="set">tw_action_param=dalvik</action>
 				<action function="set">tw_has_action2=0</action>
-				<action function="set">tw_text1={@wipe_dalvik_confirm=Wipe Dalvik?}</action>
-				<action function="set">tw_action_text1={@wiping_cache_dalvik=Wiping Dalvik...}</action>
-				<action function="set">tw_complete_text1={@wipe_dalvik_complete=Dalvik Wipe Complete}</action>
+				<action function="set">tw_text1={@tiro_wipe_dalvik_confirm}</action>
+				<action function="set">tw_action_text1={@tiro_wiping_dalvik}</action>
+				<action function="set">tw_complete_text1={@tiro_wipe_dalvik_complete}</action>
 				<action function="set">tw_slider_text={@swipe_wipe}</action>
 				<action function="page">confirm_action</action>
 			</button>

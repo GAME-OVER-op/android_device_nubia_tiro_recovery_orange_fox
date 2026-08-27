@@ -93,13 +93,36 @@ if [[ -n "$PRODUCT_OUT" ]]; then
     echo "ERROR: post-flash buttons contain explicit child images; this hides labels on tiro" >&2
     exit 1
   fi
-  [[ "$(grep -Fc '<text>{@wipe_dalvik_btn=Wipe Dalvik}</text>' "$INSTALL_XML" || true)" == "2" ]] || { echo "ERROR: Dalvik post-flash labels missing" >&2; exit 1; }
+  [[ "$(grep -Fc '<text>{@tiro_wipe_dalvik_btn}</text>' "$INSTALL_XML" || true)" == "2" ]] || { echo "ERROR: Dalvik post-flash labels missing" >&2; exit 1; }
+  [[ "$(grep -Fc 'tw_text1={@tiro_wipe_dalvik_confirm}' "$INSTALL_XML" || true)" == "2" ]] || { echo "ERROR: Dalvik confirmation strings missing" >&2; exit 1; }
+  [[ "$(grep -Fc 'tw_action_text1={@tiro_wiping_dalvik}' "$INSTALL_XML" || true)" == "2" ]] || { echo "ERROR: Dalvik progress strings missing" >&2; exit 1; }
+  [[ "$(grep -Fc 'tw_complete_text1={@tiro_wipe_dalvik_complete}' "$INSTALL_XML" || true)" == "2" ]] || { echo "ERROR: Dalvik completion strings missing" >&2; exit 1; }
   [[ "$(grep -Fc '<text>{@reboot_recovery_btn}</text>' "$INSTALL_XML" || true)" == "2" ]] || { echo "ERROR: reboot-recovery labels missing" >&2; exit 1; }
   [[ "$(grep -Fc '<text>{@reboot_system_btn}</text>' "$INSTALL_XML" || true)" == "2" ]] || { echo "ERROR: reboot-system labels missing" >&2; exit 1; }
   if grep -Fq 'tw_action_param=/cache' "$INSTALL_XML"; then
     echo "ERROR: post-flash UI still tries to wipe nonexistent /cache" >&2
     exit 1
   fi
+  LANG_DIR="$PRODUCT_OUT/recovery/root/twres/languages"
+  if [[ ! -d "$LANG_DIR" ]]; then
+    echo "ERROR: built OrangeFox language directory missing" >&2
+    exit 1
+  fi
+  python3 - "$LANG_DIR" <<'PY_LANG'
+import re, sys
+from pathlib import Path
+root = Path(sys.argv[1])
+keys = ("tiro_wipe_dalvik_btn", "tiro_wipe_dalvik_confirm", "tiro_wiping_dalvik", "tiro_wipe_dalvik_complete")
+files = sorted(root.glob("*.xml"))
+if not files:
+    raise SystemExit("ERROR: no built OrangeFox language XML files")
+for p in files:
+    text = p.read_text(encoding="utf-8", errors="strict")
+    for key in keys:
+        if not re.search(rf'<string\s+name=["\']{re.escape(key)}["\']>', text):
+            raise SystemExit(f"ERROR: {p.name} missing Tiro language key {key}")
+print(f"Dalvik localization check: {len(files)} language files contain all Tiro keys")
+PY_LANG
   if [[ ! -f "$IMAGES_XML" || ! -f "$STYLES_XML" ]]; then
     echo "ERROR: built OrangeFox theme registries missing" >&2
     exit 1

@@ -167,6 +167,8 @@ else:
             errors.append(f"theme resource patcher missing marker/resource: {expected}")
 if "patch_theme_button_resources.py" not in prepare_source:
     errors.append("prepare_source.sh does not ensure compact post-flash button resources")
+if "patch_dalvik_language_resources.py" not in prepare_source:
+    errors.append("prepare_source.sh does not install Tiro Dalvik-only localization resources")
 if 'patch_theme_button_resources.py" --check "$FOX_SRC"' not in workflow:
     errors.append("GitHub workflow does not verify patched OrangeFox button resources")
 
@@ -182,8 +184,11 @@ if install_xml.count('<button style="btn_raised_s_hl">') != 2:
     errors.append("install.xml must contain two native btn_raised_s_hl post-flash buttons")
 if '<image resource="btn_raised_s"/>' in install_xml or '<image resource="btn_raised_s_hl"/>' in install_xml:
     errors.append("post-flash buttons must not contain explicit child images; background comes from style")
-if install_xml.count('<text>{@wipe_dalvik_btn=Wipe Dalvik}</text>') != 2:
-    errors.append("both post-flash pages must contain the Dalvik button label")
+if install_xml.count('<text>{@tiro_wipe_dalvik_btn}</text>') != 2:
+    errors.append("both post-flash pages must contain the localized Dalvik button label")
+for token in ('tw_text1={@tiro_wipe_dalvik_confirm}', 'tw_action_text1={@tiro_wiping_dalvik}', 'tw_complete_text1={@tiro_wipe_dalvik_complete}'):
+    if install_xml.count(token) != 2:
+        errors.append(f"both post-flash pages must contain localized Dalvik action token: {token}")
 if install_xml.count('<text>{@reboot_recovery_btn}</text>') != 2:
     errors.append("both post-flash pages must contain the reboot-recovery label")
 if install_xml.count('<text>{@reboot_system_btn}</text>') != 2:

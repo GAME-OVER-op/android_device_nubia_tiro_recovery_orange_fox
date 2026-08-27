@@ -76,3 +76,13 @@ missing/incomplete compact style definitions and shape resources; it does **not*
 replace the current theme with an older full theme. CI checks the prepared
 source, and `verify_recovery.sh` validates the built style -> font/image ->
 shape chain plus the six button labels.
+
+## Dalvik-only post-flash localization
+
+Tiro has no usable `/cache` partition, so the post-flash action is Dalvik-only.
+The device overlay uses four Tiro-specific language keys instead of inventing
+an unresolved inline fallback. `patch_dalvik_language_resources.py` injects
+those keys into every OrangeFox language XML at source-preparation time, using
+existing localized Dalvik strings where available. This removes the runtime
+`String resource 'wipe_dalvik_btn' not found` error without reintroducing a
+`/cache` wipe.

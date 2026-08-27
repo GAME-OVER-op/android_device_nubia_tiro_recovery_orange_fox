@@ -102,6 +102,7 @@ jobs:
           grep -n "TIRO_INPUT_FF_HAPTICS" "$FOX_SRC/bootable/recovery/minuitwrp/events.cpp"
           grep -n "TIRO_GUI_BUTTON_DIAGNOSTICS" "$FOX_SRC/bootable/recovery/gui/button.cpp"
           python3 "$GITHUB_WORKSPACE/scripts/patch_theme_button_resources.py" --check "$FOX_SRC"
+          python3 "$GITHUB_WORKSPACE/scripts/patch_dalvik_language_resources.py" --check "$FOX_SRC"
           if grep -q 'AServiceManager_getService(kVibratorInstance.c_str())' "$FOX_SRC/bootable/recovery/minuitwrp/events.cpp"; then
             echo "Blocking vibrator service lookup survived patch" >&2
             exit 1
