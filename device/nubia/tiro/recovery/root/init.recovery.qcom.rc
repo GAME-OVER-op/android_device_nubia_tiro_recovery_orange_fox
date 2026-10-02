@@ -28,7 +28,6 @@
 on early-init
     wait /sys/fs/selinux/enforce
     write /sys/fs/selinux/enforce 0
-    start vendor.gatekeeper_default
 
 on early-fs
     write /proc/sys/walt/sched_lib_name "recovery,magiskboot,Updater,updater,update_engine_sideload"
@@ -63,9 +62,6 @@ on init
 on property:prepdecrypt.vendor_mounted=1
     setprop crypto.ready 1
 
-on boot
-    setprop sys.usb.config adb
-
 on post-fs-data
     mkdir /odm/firmware/o10u -p
     symlink /firmware/image /odm/firmware/o10u/image
@@ -73,7 +69,7 @@ on post-fs-data
 
 on property:twrp.modules.loaded=true
     # Load ADSP firmware for PMIC
-    write /sys/class/remoteproc/remoteproc0/state start
+    # TIRO_RECOVERY_UNUSED_SERVICE_DISABLE: remoteproc0 is SPSS on NX769J; spss.mdt is absent and SPSS is not required by OrangeFox.
     wait /sys/kernel/boot_adsp/boot
     write /sys/kernel/boot_adsp/boot 1
     wait /sys/class/power_supply/battery
@@ -84,5 +80,8 @@ on property:ro.crypto.state=encrypted && property:ro.boot.dynamic_partitions=tru
     start prepdecrypt.vendor
 
 on property:vendor.sys.listeners.registered=true
+    # QSEE listeners are ready here. Starting Gatekeeper earlier can abort before
+    # /dev/smcinvoke and the secure listener stack are usable.
     start vendor.ssgtzd
+    start vendor.gatekeeper_default
     start vendor.keymint-qti

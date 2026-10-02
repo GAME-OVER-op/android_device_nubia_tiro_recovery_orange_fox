@@ -72,7 +72,7 @@ not rename Xiaomi `aw8697_haptic.bin` to `haptic_ram.bin`, and do not restore
 ## /data decryption regresses
 
 Do not replace the compatibility KeyMint/Gatekeeper/QSEE blobs first. Compare
-the final recovery root against `reference/recovery-root.sha256` and confirm
+the final recovery root against `reference/working-ramdisk.sha256` and confirm
 that `prepdecrypt.sh`, QSEE, KeyMint and Gatekeeper services are present.
 
 ## OrangeFox sync says `patch-manifest-fox_14.1.diff` is missing

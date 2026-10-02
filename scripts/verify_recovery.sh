@@ -168,6 +168,39 @@ PY_GUI
   done
   echo "Module check: incompatible Xiaomi touch/haptic modules removed"
 
+  # Tiro runtime regressions caught by the 2026-10-02 recovery logs.
+  USB_RC="$PRODUCT_OUT/recovery/root/init.recovery.usb.rc"
+  VENDOR_UEVENTD="$PRODUCT_OUT/recovery/root/vendor/etc/ueventd.rc"
+  [[ -f "$USB_RC" ]] || { echo "ERROR: built init.recovery.usb.rc missing" >&2; exit 1; }
+  grep -Fq 'wait /sys/class/udc/${ro.boot.usbcontroller} 5' "$USB_RC" || { echo "ERROR: Tiro UDC readiness wait missing" >&2; exit 1; }
+  grep -Fq 'setprop sys.usb.config adb' "$USB_RC" || { echo "ERROR: adb is not requested after the UDC wait" >&2; exit 1; }
+  ! grep -Fq '/config/usb_gadget/g2' "$USB_RC" || { echo "ERROR: stale unused USB gadget g2 setup remains" >&2; exit 1; }
+  ! grep -Fq 'on property:sys.usb.config=adb && property:sys.usb.configfs=1' "$USB_RC" || { echo "ERROR: duplicate device-side plain ADB start action remains" >&2; exit 1; }
+  ! grep -Fq 'on property:sys.usb.ffs.ready=1 && property:sys.usb.config=adb && property:sys.usb.configfs=1' "$USB_RC" || { echo "ERROR: duplicate device-side ADB gadget bind remains" >&2; exit 1; }
+  [[ -f "$VENDOR_UEVENTD" ]] || { echo "ERROR: built vendor ueventd.rc missing" >&2; exit 1; }
+  python3 - "$VENDOR_UEVENTD" <<'PY_UEVENTD'
+import sys
+from pathlib import Path
+p = Path(sys.argv[1])
+text = p.read_text(encoding="utf-8", errors="strict")
+if "import /vendor/etc/ueventd.qcom.userdebug.rc" in text:
+    raise SystemExit("ERROR: vendor ueventd imports missing userdebug fragment")
+if "subsystem dma_heap" in text:
+    raise SystemExit("ERROR: vendor ueventd duplicates base dma_heap subsystem")
+for n, line in enumerate(text.splitlines(), 1):
+    s = line.strip()
+    if s == "*/":
+        raise SystemExit(f"ERROR: vendor ueventd stray token at line {n}")
+    if s.startswith("/sys/") and len(s.split()) not in (5, 6):
+        raise SystemExit(f"ERROR: malformed vendor ueventd /sys rule at line {n}: {s}")
+print("ueventd syntax check: no malformed /sys rules or stale imports")
+PY_UEVENTD
+  if grep -Eq '^[[:space:]]*mi_ext[[:space:]]' "$RECOVERY_FSTAB"; then
+    echo "ERROR: stale Xiaomi mi_ext mapping survived into built ramdisk" >&2
+    exit 1
+  fi
+  grep -Fq '{@auto_dfe_chk=Disable forced encryption}' "$INSTALL_XML" || { echo "ERROR: auto_dfe_chk fallback label missing" >&2; exit 1; }
+  echo "Runtime cleanup check: USB sequencing, ueventd, mi_ext and DFE label are clean"
 
   # Minimal recovery-only cleanup: verify only the paths proven broken on Tiro.
   SE_OMAPI_RC="$PRODUCT_OUT/recovery/root/system/etc/init/se_omapi.rc"
@@ -185,5 +218,19 @@ PY_GUI
   [[ -f "$QCOM_RC" ]] || { echo "ERROR: built init.recovery.qcom.rc missing" >&2; exit 1; }
   ! grep -q 'write /sys/class/remoteproc/remoteproc0/state start' "$QCOM_RC" || { echo "ERROR: SPSS remoteproc0 is still force-started" >&2; exit 1; }
   grep -q 'write /sys/kernel/boot_adsp/boot 1' "$QCOM_RC" || { echo "ERROR: required ADSP boot path was removed" >&2; exit 1; }
-  echo "Unused-service check: broken eSE/StrongBox/SPSS starts disabled; working decrypt/ADSP paths preserved"
+  python3 - "$QCOM_RC" <<'PY_QCOM'
+import sys
+from pathlib import Path
+text = Path(sys.argv[1]).read_text(encoding="utf-8", errors="strict")
+listener = text.find("on property:vendor.sys.listeners.registered=true")
+gatekeeper = text.find("start vendor.gatekeeper_default")
+if gatekeeper < 0 or listener < 0 or gatekeeper < listener:
+    raise SystemExit("ERROR: Gatekeeper starts before QSEE listeners are ready")
+if text.count("start vendor.gatekeeper_default") != 1:
+    raise SystemExit("ERROR: Gatekeeper must have exactly one explicit recovery start")
+if "on boot\n    setprop sys.usb.config adb" in text:
+    raise SystemExit("ERROR: qcom rc requests adb before UDC readiness")
+print("QSEE ordering check: Gatekeeper starts after qseecomd listener registration")
+PY_QCOM
+  echo "Unused-service check: broken eSE/StrongBox/SPSS starts disabled; working decrypt/ADSP/Gatekeeper paths preserved"
 fi

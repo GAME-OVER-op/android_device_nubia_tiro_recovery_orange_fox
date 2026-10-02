@@ -10,5 +10,17 @@ vendor/bin/prepdecrypt.sh
 system/etc/recovery.fstab
 init.recovery.qcom.rc
 
-These components are intentionally preserved in the first source-built tiro
-recovery because /data decryption is already proven to work with them.
+The cryptographic binaries and prepdecrypt script remain byte-for-byte preserved.
+The October 2026 on-device logs proved two narrow recovery-configuration defects
+that are now intentionally corrected around that known-good stack:
+
+- `init.recovery.qcom.rc`: Gatekeeper is no longer started in early-init; it is
+  started after qseecomd reports `vendor.sys.listeners.registered=true`. The
+  unrelated SPSS `remoteproc0` forced start is also removed; the working ADSP
+  boot path is preserved.
+- `system/etc/recovery.fstab`: only invalid device-inapplicable rows are removed
+  (`rescue` as `/cache` and Xiaomi `mi_ext`). All `/data`, metadata encryption,
+  KeyMint/QSEE and FBE mount parameters remain identical to the working recovery.
+
+These changes deliberately keep the proven decrypt implementation intact while
+fixing deterministic recovery boot errors around it.

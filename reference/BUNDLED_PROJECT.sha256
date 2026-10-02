@@ -3,7 +3,7 @@ d879ec1cd78c90c5640daaf7fa03365eca7a2ecf0a323b2c29115f25a708ba98  ./.github/work
 0210ad33176865d8a3000332f5010f6ae92b83c9f34d26ecef9afa475fc3373d  ./.gitignore
 2edf079f1420d24f490cb801e9b4ef04aa7b25e4d2e3c5eb9d166f95ecad9b41  ./LICENSE
 ea0f3e9f219da12029b4585d1d37e43f4ccafc0dcb67a4bca06e02fb42a96a33  ./NOTICE
-56c83bc7270131a2536762c11b92489ce0d5bde03592fd03395e672ec3fcd2bf  ./README.md
+d9a7323eb1d50d029afa6109a22461dfe89f2af3899831f09e24d433a9e7b534  ./README.md
 d02ab38f6774ab0bbdafc7b0b96122913c13598e2e0650f2be858696edc7a597  ./THIRD_PARTY.md
 235d324f978a01574045611a5cc65703f2d7dc84ef176de8ea9dce4229b2f203  ./config/source-lock.env
 915bb842a427b9bacea4ff23a68843312a4ac027636c2c61e2021e3adbf9f6c2  ./device/nubia/tiro/Android.bp
@@ -22,8 +22,8 @@ e70d77a35fe0a841965d9339bb3d085a9451a8a668cb04d1549adb50db11220a  ./device/nubia
 7d77585af582729759bc5b75fb8fd970dae75889b29a1a7c0d4a79f07bd8a1cb  ./device/nubia/tiro/prebuilt/kernel
 6c519053f6695a109d97e8406699fae8e34472eba3072b125cf7f1c60999cf97  ./device/nubia/tiro/recovery/root/FFiles/DFE.zip
 c14f67997a08c2110f284169f05a6e0f3889514f01fe63f1019fa91ac6b133c5  ./device/nubia/tiro/recovery/root/FFiles/nano/bin/nano.bin
-41eb9fa3fa6f6560e03b7c6b5dcd803203e0f4bfda98b8c6e8d57528b586d802  ./device/nubia/tiro/recovery/root/init.recovery.qcom.rc
-5b72034668f686ec79acd29b9006f582e8c8a9a450123228b18b65bf20e4506f  ./device/nubia/tiro/recovery/root/init.recovery.usb.rc
+5fb9efa5d8b458b5c3a70bdb4198d2a7a6d51fbf8e5bc250ea0d957795bebd0d  ./device/nubia/tiro/recovery/root/init.recovery.qcom.rc
+3e297ac912af0949728462876cd22f0fd51d1197632b02bd956c8586336fe8a9  ./device/nubia/tiro/recovery/root/init.recovery.usb.rc
 29feda6dd582ff8cd54da85219726f173b91b38fb1890096f08de1ec289d4456  ./device/nubia/tiro/recovery/root/lib/firmware/aw8697_haptic.bin
 9a413b131ecf0ccfb02a837ddb33766d8604cc00da7937b79bd363b53c8d7d86  ./device/nubia/tiro/recovery/root/lib/firmware/aw8697_rtp_1.bin
 420f32815f67fe41c59ee2933521d12970fd1cee2c369db0eeecf84be1d96bc7  ./device/nubia/tiro/recovery/root/lib/firmware/novatek_nt38771_o10u_fw_csot.bin
@@ -44,7 +44,7 @@ fd977fddcbee5f5945cccf0792bbd12ba9c1b6a59df62cef6e692a85f87b39f0  ./device/nubia
 635f89b866cf3d36a26703b3a53cced5eccb5b96e2a83b752b3a9454fb59ea98  ./device/nubia/tiro/recovery/root/system/etc/event-log-tags
 71378853e7c8823fa40dea2c1f145aebee096cf0ebf8b7c135d57926c069c9a2  ./device/nubia/tiro/recovery/root/system/etc/init/android.hardware.boot-service.qti.recovery.rc
 dba19fed148c6c011a5361b6b0c933cdfce7f46b869d0151d13cfb70a094d87b  ./device/nubia/tiro/recovery/root/system/etc/init/touch_report.rc
-484c45b1b36fc19e7f247a513b5e931ecca13c4bfb263e968173fbf9d82a960b  ./device/nubia/tiro/recovery/root/system/etc/recovery.fstab
+441bff4b57ede4d9b7f9e0e85fee9c2dd1fa163c0b74f3a0d724a1de10271575  ./device/nubia/tiro/recovery/root/system/etc/recovery.fstab
 de81e54225611f33525e7990155c3f2392d127dc5423f41e8b69c7a5e4221d39  ./device/nubia/tiro/recovery/root/system/etc/task_profiles.json
 62737c13727e545bcb13d58ab866f9fa68d99b67a9563a626316e2471ea1a382  ./device/nubia/tiro/recovery/root/system/etc/twrp.flags
 6b9f83778aa974f9725e9163be0a0ae2e053fca6f0637510fd449e2671db990e  ./device/nubia/tiro/recovery/root/system/etc/ueventd.rc
@@ -74,7 +74,7 @@ b308fd2c22fb4e94f243dac6fd89d9738a26939e34098666adb6e0c770021ec5  ./device/nubia
 3079baf215591f13034a6d80c71e77b426503a52709e0851d9e59a0c89195100  ./device/nubia/tiro/recovery/root/system/lib64/libtouchreport_alg.so
 db1a7f9c9371365a68fceb704ed600f1721b6d9c57922251864d36ac79674bea  ./device/nubia/tiro/recovery/root/system/lib64/libtouchreport_hal.so
 a4d2458cfcebb44d00a31bc10336b3c4bc19e749d63ec2dcd4d869b7832e75af  ./device/nubia/tiro/recovery/root/system/lib64/libtouchreport_sensor.so
-595b75641fec7228ccf9928c6e67967ee78f27914e8d600f5e06498a2cd19ed4  ./device/nubia/tiro/recovery/root/twres/pages/install.xml
+ae78a9655760ff0c040d0a1b62e6dbc3360070a08cec132af6d17ccb417df75d  ./device/nubia/tiro/recovery/root/twres/pages/install.xml
 61b2d6643ede5a859d6798ffd344b1f1ee8314757f113cd518a7bd550383b6af  ./device/nubia/tiro/recovery/root/vendor/bin/hw/android.hardware.gatekeeper-service-qti
 f7a49a7b3710cd83ab330c20bea97636a50b1daaeaa2b950202a7a36e5c39dde  ./device/nubia/tiro/recovery/root/vendor/bin/hw/android.hardware.health-service.qti_recovery
 70624ce27c42e76366b4e44544ad4954964017c9b70c074ff7e8d500646cfbf6  ./device/nubia/tiro/recovery/root/vendor/bin/hw/android.hardware.secure_element-service.qti
@@ -98,7 +98,7 @@ aded741b4a24397a5b40e6a3ce4f5845225f1d6a0ad3425c7537e6bb33f63950  ./device/nubia
 ff8bd5d76bbef234d0cf2284b268381d52721509554a3999460b1f075097259a  ./device/nubia/tiro/recovery/root/vendor/etc/init/ssgtzd.rc
 e9cf2244e9f87eaf2d94c355ca63ad7359b2f02dafa6ab8d731ccab13d69c99e  ./device/nubia/tiro/recovery/root/vendor/etc/init/vendor.xiaomi.hardware.vibratorfeature.service.rc
 484f4fffd7df268110d6ade96659274c72dd6bdb046d463471994b0e0213f309  ./device/nubia/tiro/recovery/root/vendor/etc/ssg/ta_config.json
-82ec5f42378fb350450b50f64f8431b1898196f21b2ecb3fc81f95fcf8ec668d  ./device/nubia/tiro/recovery/root/vendor/etc/ueventd.rc
+87d86782b69f6f9c7f4659c1b9df918281dff2500f4d418424ee929acf3ed582  ./device/nubia/tiro/recovery/root/vendor/etc/ueventd.rc
 0fdc8af4b210d56d36e2f7840a9c4272d3f0ce357109d8555f39ade0b958fa81  ./device/nubia/tiro/recovery/root/vendor/etc/vintf/manifest.xml
 b582d43ce9b0d4a554a033de2cfbf270210d2a9a7e1c6d09b66c03d95c3ed67d  ./device/nubia/tiro/recovery/root/vendor/etc/vintf/manifest/android.hardware.health-service.qti.xml
 6e28c54b5b942406da27a2dbf95eb4f4e378deaa21843e8735d203870aa1898e  ./device/nubia/tiro/recovery/root/vendor/etc/vintf/manifest/android.hardware.secure_element.xml
@@ -290,9 +290,9 @@ acf45660e59de56274f8a0a0da3ad6eef88cdabdd5316ac04990bc1f8debce2e  ./docs/ARCHITE
 4580a2bb86993cd93a6d37be4daca02d3eaaa7a0d0fc74941002c12c0b88ade8  ./docs/BUILD.md
 7b32dcb376e7f05d16aec8ac856d06c6e4d81f1f007554dc6433365b6ad64e5d  ./docs/CI.md
 274a20d3f90e7ed35be7444916d1f47563b3a0fe28064454b116cf31acbb5729  ./docs/FEATURES.md
-ddb3181316ce7773cb0ba2a4ebe778981c1c8bd21f0b8e9d8810db167f39f9f2  ./docs/FINAL_CLEANUP.md
+0df0ed748ef641ebf60abca4b2f4bed943c094f5662437369a7cd61964cd6e25  ./docs/FINAL_CLEANUP.md
 68d0d28d6b2e6772413af20544c0841d3765ebc375ca9bad85b22383987604ff  ./docs/HAPTICS_FIX.md
-42e61f198aff3b4640b35d9993c6e053ae07b20510b6063dd6db3579d16c5688  ./docs/TROUBLESHOOTING.md
+aea46cb16925d48e509ebb450ceef62aa60165527cffacfb72310556d1f5d186  ./docs/TROUBLESHOOTING.md
 12aedbf4d6d0e653f0df858f740c6e6f77abd57ac875763d9df0bf32404945c9  ./patches/README.md
 555f2cdc0c1b0871cb6503d9755027c6a8f28453c61877c0dcd89fc5d5a7259c  ./reference/KNOWN_GOOD_IMAGE.txt
 1acb24af9a31c78a8d153b85267796355586ecdeffb7de54c5ccac8aa91ae171  ./reference/KNOWN_GOOD_RECOVERY_FSTAB.txt
@@ -300,7 +300,7 @@ ef09f892b73cc9df1bc49d889d9728044772e7c4298c18aaf06c27dcbba1caf9  ./reference/KN
 a08536438b8f560b302814416620a3e160260894078f6a22b1b7a031660eb2fc  ./reference/NUBIA_KERNEL_NOTES.txt
 41ea4d5a9b8e17431a26a377b663391dbcdd4af957ccc3878fbc3ed482fb8ae0  ./reference/SPLIT_IMAGE_LAYOUT.txt
 c768afd5c8bfaf55d17c373ded24ef69a60dd803e0de32fc3097129ae86cb317  ./reference/UPSTREAM_SOURCES.txt
-324b32f56a198c1afd9474f7643d986ea0957b9f5db3136a080ee203dd663d26  ./reference/WORKING_DECRYPT_STACK.txt
+6fc70ec00d3af1d81ee2714dda1464d51e9de47844f820f49635c0d04c7712dc  ./reference/WORKING_DECRYPT_STACK.txt
 0b6c0fbc29fb67e3623dd408fa91ca466fdf224198881641ecedc41d8c2da2aa  ./reference/source-recovery-root.sha256
 f4d5244f22b276e80588d6e7934455ac02ce80f9b6c6c6d4a4f4cc34c897f3e3  ./reference/tiro_diff.config
 e5ab474f7f0e73454a561d2405e50212d88b96cb915293883af6c3cb41cd5303  ./reference/working-ramdisk-symlinks.txt
@@ -318,5 +318,5 @@ fc06293e4733fdc8a5e9ba678338d8faf254c33758854d7631b6e830b6722b23  ./scripts/patc
 f381245a1eaf6bdcac094e49763ce1c10cc50cc7496f5131ebb475e9537232a0  ./scripts/setup_ci_swap.sh
 aa855b499082d448153a5360e73b1e93c5d91b6bd629fb077e6a635f15d05bf7  ./scripts/sync_fox.sh
 512f3078b0c7f22bdb1b1f211eb71572a3c3d535634bf15e6723b63ed842457b  ./scripts/test_haptics_patch.py
-060552afaf4b15ecf7618910a93af53c4262e49c919d6dd38e164eec702ae76e  ./scripts/validate_tree.py
-a1c7030c9abd37d1f9a0aee8ae705586bda0484736d10b07381fb25b54f8b187  ./scripts/verify_recovery.sh
+9c37a3ce4be829156eb996febfdd2cff8752194f97d658b6e2988acdad87ddd2  ./scripts/validate_tree.py
+f307f5df9af6bd99147ac720513282ddc23bf3e4ed30700ae6c41ed067461b1d  ./scripts/verify_recovery.sh

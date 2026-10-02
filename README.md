@@ -98,12 +98,15 @@ USB-OTG was already present in the known-good recovery configuration as
 
 ## Why the decryption stack is preserved
 
-The first source build deliberately preserves the KeyMint/Gatekeeper/QSEE/FBE
-components from the working reference recovery. They were compared with the
-supplied unpacked ramdisk and the critical files match byte-for-byte.
+The source build deliberately preserves the KeyMint/Gatekeeper/QSEE/FBE
+binaries and prepdecrypt implementation from the working reference recovery;
+those critical files still match byte-for-byte. The surrounding init/fstab
+configuration only contains the narrow log-proven Tiro fixes documented in
+`reference/WORKING_DECRYPT_STACK.txt` (Gatekeeper ordering, SPSS start removal,
+and invalid cache/mi_ext rows).
 
 This is more conservative than replacing a proven decryption chain just to make
-the tree look device-pure. See `reference/WORKING_DECRYPT_STACK.txt`.
+the tree look device-pure.
 
 ## Build with GitHub Actions
 

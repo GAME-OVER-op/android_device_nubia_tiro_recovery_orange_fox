@@ -86,3 +86,46 @@ those keys into every OrangeFox language XML at source-preparation time, using
 existing localized Dalvik strings where available. This removes the runtime
 `String resource 'wipe_dalvik_btn' not found` error without reintroducing a
 `/cache` wipe.
+
+## USB gadget startup ordering
+
+The October 2026 on-device logs showed two independent init actions handling the
+plain `adb` configuration: the base recovery `/system/etc/init/hw/init.rc` and
+the device `init.recovery.usb.rc`. Both tried to link `ffs.adb` and bind `g1/UDC`,
+which produced `File exists` and `Device or resource busy` races.
+
+Tiro now leaves the plain ADB gadget action to the base recovery init. The
+device rc still owns Tiro-specific MTP, sideload and fastboot modes, but it waits
+up to five seconds for `/sys/class/udc/${ro.boot.usbcontroller}` before setting
+`sys.usb.config=adb`. The old early `on boot` ADB request was removed from
+`init.recovery.qcom.rc`, and the unused `g2` gadget directory setup was removed
+so only the actually configured `g1` gadget is created.
+
+## QSEE / Gatekeeper ordering
+
+The first Gatekeeper process used to start in `early-init`, before qseecomd had
+registered its secure listeners, and aborted with signal 6. Later Gatekeeper
+starts succeeded and FBE decrypted normally. Gatekeeper is now started once,
+from `vendor.sys.listeners.registered=true`, next to the working QTI KeyMint
+start. This preserves the proven decrypt stack while removing the deterministic
+early crash.
+
+## ueventd parser cleanup
+
+The bundled vendor `ueventd.rc` contained three malformed `/sys` rules, a stray
+`*/` token, a duplicate `dma_heap` subsystem declaration, and an import of an
+unbundled `ueventd.qcom.userdebug.rc`. These generated parser errors on every
+boot and could prevent intended permissions from being applied.
+
+The `/sys` rules now use the `nodename attribute mode uid gid` form, the stale
+import/token were removed, and `dma_heap` is left to the base system ueventd
+configuration. Static and built-image verification now reject malformed Tiro
+`/sys` rules.
+
+## Tiro-only fstab and install-page cleanup
+
+The Xiaomi-only `mi_ext` entries were removed from `recovery.fstab`; NX769J has
+no such logical partition and OrangeFox was probing it twice on every boot. The
+install-page `auto_dfe_chk` reference now carries a readable fallback label so
+missing upstream language resources cannot produce an unresolved-string error.
+

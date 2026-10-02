@@ -82,6 +82,63 @@ for key, value in checks.items():
     if key not in board or value not in board:
         errors.append(f"expected {key}={value}")
 
+# Runtime fixes validated from the 2026-10-02 on-device logs.
+recovery_root = D / "recovery/root"
+usb_rc = (recovery_root / "init.recovery.usb.rc").read_text()
+qcom_rc = (recovery_root / "init.recovery.qcom.rc").read_text()
+ueventd_rc = (recovery_root / "vendor/etc/ueventd.rc").read_text()
+recovery_fstab = (recovery_root / "system/etc/recovery.fstab").read_text()
+install_xml = (recovery_root / "twres/pages/install.xml").read_text()
+
+# Plain ADB is already handled by the base recovery init.  The device-specific
+# USB rc must not race it by linking ffs.adb/binding g1/UDC a second time.
+if "wait /sys/class/udc/${ro.boot.usbcontroller} 5" not in usb_rc:
+    errors.append("USB init must wait up to 5 seconds for the Tiro UDC")
+if "setprop sys.usb.config adb" not in usb_rc:
+    errors.append("USB init must request adb only after the UDC wait")
+if "/config/usb_gadget/g2" in usb_rc:
+    errors.append("stale unused USB gadget g2 setup remains")
+if "on property:sys.usb.config=adb && property:sys.usb.configfs=1" in usb_rc:
+    errors.append("device USB rc duplicates the base recovery plain-ADB start action")
+if "on property:sys.usb.ffs.ready=1 && property:sys.usb.config=adb && property:sys.usb.configfs=1" in usb_rc:
+    errors.append("device USB rc duplicates the base recovery plain-ADB gadget bind action")
+if "on boot\n    setprop sys.usb.config adb" in qcom_rc:
+    errors.append("qcom rc still requests adb before the UDC is ready")
+
+# Gatekeeper depends on the QSEE listener stack. It must be started only after
+# qseecomd publishes vendor.sys.listeners.registered=true, alongside KeyMint.
+listener_at = qcom_rc.find("on property:vendor.sys.listeners.registered=true")
+gatekeeper_at = qcom_rc.find("start vendor.gatekeeper_default")
+if gatekeeper_at < 0:
+    errors.append("Gatekeeper recovery start is missing")
+elif listener_at < 0 or gatekeeper_at < listener_at:
+    errors.append("Gatekeeper is started before QSEE listeners are ready")
+if qcom_rc.count("start vendor.gatekeeper_default") != 1:
+    errors.append("Gatekeeper must have exactly one explicit recovery start")
+if "write /sys/class/remoteproc/remoteproc0/state start" in qcom_rc:
+    errors.append("SPSS remoteproc0 forced start still present in bundled device tree")
+
+# ueventd rejects malformed /sys rules.  Keep every /sys rule in the modern
+# nodename/attribute/mode/uid/gid form and do not import a file we do not ship.
+if "import /vendor/etc/ueventd.qcom.userdebug.rc" in ueventd_rc:
+    errors.append("vendor ueventd still imports missing ueventd.qcom.userdebug.rc")
+if "subsystem dma_heap" in ueventd_rc:
+    errors.append("vendor ueventd duplicates the base dma_heap subsystem")
+for lineno, line in enumerate(ueventd_rc.splitlines(), 1):
+    stripped = line.strip()
+    if stripped == "*/":
+        errors.append(f"vendor ueventd contains stray invalid token at line {lineno}")
+    if stripped.startswith("/sys/") and len(stripped.split()) not in (5, 6):
+        errors.append(f"vendor ueventd malformed /sys rule at line {lineno}: {stripped}")
+
+# NX769J has no Xiaomi mi_ext logical partition; probing it only produces a
+# deterministic startup error.  Also keep the DFE install option self-contained
+# so the UI never emits an unresolved-string error.
+if any(line.lstrip().startswith("mi_ext ") for line in recovery_fstab.splitlines()):
+    errors.append("stale Xiaomi mi_ext entries remain in recovery.fstab")
+if '{@auto_dfe_chk=Disable forced encryption}' not in install_xml:
+    errors.append("install.xml auto_dfe_chk is missing its safe fallback label")
+
 # AOSP/OrangeFox envsetup is intentionally interactive-shell oriented: it is
 # not nounset-safe and can return 1 from a harmless final optional probe. CI and
 # local builds must therefore disable -u for Android shell functions and disable
@@ -218,17 +275,21 @@ for rel in ("recovery/root/system/etc/recovery.fstab", "recovery/root/system/etc
         errors.append(f"stale Xiaomi cache/rescue mapping remains in {rel}")
 
 # Prove that recovery.fstab differs from the known-good working file only by
-# removal of the invalid rescue -> /cache row; all FBE/decrypt mount data stays
-# byte-for-byte identical after normalisation.
+# removal of the invalid rescue -> /cache row and the stale Xiaomi mi_ext rows;
+# all FBE/decrypt mount data stays byte-for-byte identical after normalisation.
 ref_fstab = ROOT / "reference/KNOWN_GOOD_RECOVERY_FSTAB.txt"
 if not ref_fstab.is_file():
     errors.append("missing reference/KNOWN_GOOD_RECOVERY_FSTAB.txt")
 else:
-    def without_cache_row(text: str) -> str:
-        return "\n".join(ln for ln in text.splitlines() if not ('/cache' in ln and 'by-name/rescue' in ln)).strip()
+    def without_tiro_invalid_rows(text: str) -> str:
+        return "\n".join(
+            ln for ln in text.splitlines()
+            if not ('/cache' in ln and 'by-name/rescue' in ln)
+            and not ln.lstrip().startswith('mi_ext ')
+        ).strip()
     current = (D / "recovery/root/system/etc/recovery.fstab").read_text()
-    if without_cache_row(ref_fstab.read_text()) != current.strip():
-        errors.append("recovery.fstab changed beyond the intentional rescue/cache removal")
+    if without_tiro_invalid_rows(ref_fstab.read_text()) != current.strip():
+        errors.append("recovery.fstab changed beyond the intentional cache/mi_ext cleanup")
 
 # These three Xiaomi modules produced Exec format error on the Red Magic kernel.
 # Native Goodix/input and Awinic FF haptics are already confirmed working.
@@ -300,8 +361,10 @@ if rc_path.is_file():
     if "on init\n    start vibratorfeature-hal-service" in rc:
         errors.append("Xiaomi vibratorfeature service is still auto-started")
 
-# Verify that the decryption chain preserved from the known-good ramdisk still
-# matches byte-for-byte. This is intentionally stronger than checking existence.
+# Verify that the binary/script portion of the decryption chain preserved from
+# the known-good ramdisk still matches byte-for-byte. init.recovery.qcom.rc is
+# intentionally excluded: only its proven-bad service ordering was corrected and
+# the semantic assertions above protect the QSEE/Gatekeeper/ADSP requirements.
 def sha256(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as f:
@@ -326,7 +389,6 @@ critical_decrypt = [
     "vendor/lib64/libqtikeymint.so",
     "vendor/lib64/libQSEEComAPI.so",
     "vendor/bin/prepdecrypt.sh",
-    "init.recovery.qcom.rc",
 ]
 for rel in critical_decrypt:
     src = D / "recovery/root" / rel
@@ -352,7 +414,7 @@ print("  haptics: native Nubia/Awinic continuous mode, persistent input-FF fallb
 print("  source profile: OrangeFox fox_14.1 / Android 14 / SDK 34")
 print("  CI memory: 16 GiB total active swap target + 60 s heartbeat; preserves existing runner swap; no post-build swapoff")
 print("  GitHub JS actions: checkout@v6 + upload-artifact@v6 / Node.js 24")
-print("  decrypt compatibility stack: critical binaries byte-identical; fstab identical except invalid cache mapping removal")
+print("  decrypt compatibility stack: critical binaries byte-identical; qcom init ordering fixed; fstab differs only by invalid cache/mi_ext removal")
 print("  OrangeFox App Manager: enabled")
 print("  GUI post-flash buttons: native styled backgrounds + visible text path; diagnostics retained")
 print("  cache handling: no fake rescue/cache partition; OrangeFox persistent logs fall back to /data")

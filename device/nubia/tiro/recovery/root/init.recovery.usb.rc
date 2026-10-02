@@ -45,9 +45,7 @@ on fs
     mkdir /config/usb_gadget/g1/functions/ffs.adb
     mkdir /config/usb_gadget/g1/functions/ffs.fastboot
     mkdir /config/usb_gadget/g1/configs/b.1 0770
-    mkdir /config/usb_gadget/g2/configs/b.1 0770
     mkdir /config/usb_gadget/g1/configs/b.1/strings/0x409 0770
-    mkdir /config/usb_gadget/g2/configs/b.1/strings/0x409 0770
     write /config/usb_gadget/g1/configs/b.1/MaxPower 900
     write /config/usb_gadget/g1/os_desc/b_vendor_code 0x1
     write /config/usb_gadget/g1/os_desc/qw_sign "MSFT100"
@@ -66,8 +64,10 @@ on fs
 on property:ro.boot.usbcontroller=*
     setprop sys.usb.controller ${ro.boot.usbcontroller}
     wait /sys/bus/platform/devices/${ro.boot.usb.dwc3_msm:-a600000.ssusb}/mode
-    # write /sys/bus/platform/devices/${ro.boot.usb.dwc3_msm:-a600000.ssusb}/mode peripheral
-    wait /sys/class/udc/${ro.boot.usbcontroller} 1
+    # UDC appears a few seconds after init on Tiro.  Do not race adbd against
+    # the controller: the base recovery init owns the plain ADB gadget action.
+    wait /sys/class/udc/${ro.boot.usbcontroller} 5
+    setprop sys.usb.config adb
 
 on property:sys.usb.config=none && property:sys.usb.configfs=1
     write /config/usb_gadget/g1/UDC "none"
@@ -85,19 +85,8 @@ on property:sys.usb.config=none && property:sys.usb.configfs=1
 on property:init.svc.adbd=stopped
     setprop sys.usb.ffs.ready 0
 
-on property:sys.usb.config=adb && property:sys.usb.configfs=1
-    start adbd
-
 on property:sys.usb.config=mtp,adb && property:sys.usb.configfs=1
     start adbd
-
-on property:sys.usb.ffs.ready=1 && property:sys.usb.config=adb && property:sys.usb.configfs=1
-    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "adb"
-    write /config/usb_gadget/g1/idVendor 0x18D1
-    write /config/usb_gadget/g1/idProduct 0x4E11
-    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f1
-    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
-    setprop sys.usb.state ${sys.usb.config}
 
 on property:sys.usb.ffs.ready=1 && property:sys.usb.config=sideload && property:sys.usb.configfs=1
     write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "adb"
