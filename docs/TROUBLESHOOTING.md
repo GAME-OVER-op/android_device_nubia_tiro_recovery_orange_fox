@@ -44,29 +44,27 @@ The output library must not be an old incrementally relinked copy.
 
 ## Haptics no longer delay the UI but do not vibrate
 
-Check the native Tiro path first:
+Probe the live input device:
 
 ```bash
-ls -l /sys/class/timed_output/vibrator/cont
 /system/bin/tiro-haptics-debug.sh
+getevent -lp /dev/input/event* 2>/dev/null
 ```
 
-A deliberate hardware test is available:
-
-```bash
-/system/bin/tiro-haptics-debug.sh --test
-```
-
-The expected input fallback is normally named:
+The expected Tiro device is named:
 
 ```text
 awinic_haptic
-FF_CONSTANT
 ```
 
+and it must advertise `FF_RUMBLE`. The recovery patch deliberately prefers
+`FF_RUMBLE`; direct on-device testing confirmed that this effect physically
+drives the Tiro actuator. `FF_CONSTANT` is only a compatibility fallback for a
+different kernel that might omit RUMBLE support.
+
 `haptic_ram.bin` errors can still appear because the genuine Tiro waveform blob
-is not bundled. The primary continuous-mode backend does not depend on it. Do
-not rename Xiaomi `aw8697_haptic.bin` to `haptic_ram.bin`, and do not restore
+is not bundled. They do not prevent the verified `FF_RUMBLE` path from working.
+Do not rename Xiaomi `aw8697_haptic.bin` to `haptic_ram.bin`, and do not restore
 `si_haptic.ko`/Xiaomi touch modules built against a different kernel ABI.
 
 ## /data decryption regresses

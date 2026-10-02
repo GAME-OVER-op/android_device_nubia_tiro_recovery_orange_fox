@@ -54,20 +54,22 @@ for forbidden in (
     if forbidden in board:
         errors.append(f"blocking/disabled-haptics flag present: {forbidden}")
 
-# Tiro's native haptic_hv driver exposes a firmware-independent continuous mode.
-# Recovery must prefer it over FF_CONSTANT, because the latter enters AW_RAM_LOOP_MODE
-# and depends on haptic_ram.bin, which is not present in the known-good ramdisk.
+# On-device probing and a direct evdev hardware test prove that Tiro's
+# awinic_haptic device drives the actuator through FF_RUMBLE. It advertises
+# FF_CONSTANT too, but that path is not reliable while haptic_ram.bin is absent.
 haptic_patcher = (ROOT / "scripts/patch_haptics.py").read_text()
-cont_call = haptic_patcher.find("tiro_vibrate_awinic_cont(timeout_ms)")
-ff_call = haptic_patcher.find("tiro_vibrate_input_ff(timeout_ms)")
-if "TIRO_AWINIC_CONT_HAPTICS" not in haptic_patcher:
-    errors.append("native Tiro/Awinic continuous haptics backend missing")
-if 'TIRO_AWINIC_CONT_FILE \"/sys/class/timed_output/vibrator/cont\"' not in haptic_patcher and '/sys/class/timed_output/vibrator/cont' not in haptic_patcher:
-    errors.append("native Tiro haptics cont sysfs path missing")
-if cont_call < 0 or ff_call < 0 or cont_call > ff_call:
-    errors.append("Tiro continuous haptics must run before input-FF fallback")
+rumble_probe = haptic_patcher.find("tiro_ff_test_bit(FF_RUMBLE, ff_bits)")
+constant_probe = haptic_patcher.find("tiro_ff_test_bit(FF_CONSTANT, ff_bits)")
+if "TIRO_INPUT_FF_HAPTICS_V2" not in haptic_patcher:
+    errors.append("Tiro FF_RUMBLE-first haptics backend missing")
+if "/sys/class/timed_output/vibrator/cont" in haptic_patcher:
+    errors.append("stale nonexistent Tiro timed_output/cont haptics backend remains")
+if rumble_probe < 0 or constant_probe < 0 or rumble_probe > constant_probe:
+    errors.append("Tiro input haptics must prefer FF_RUMBLE over FF_CONSTANT")
 if "effect.id = static_cast<__s16>(tiro_ff_effect_id);" not in haptic_patcher:
-    errors.append("input-FF fallback does not reuse its persistent effect slot")
+    errors.append("input-FF backend does not reuse its persistent effect slot")
+if "tiro_stop_ff_effect(fd);" not in haptic_patcher:
+    errors.append("input-FF backend does not stop an in-flight effect before retrigger")
 
 checks = {
     "BOARD_BOOT_HEADER_VERSION": "4",
@@ -132,12 +134,14 @@ for lineno, line in enumerate(ueventd_rc.splitlines(), 1):
         errors.append(f"vendor ueventd malformed /sys rule at line {lineno}: {stripped}")
 
 # NX769J has no Xiaomi mi_ext logical partition; probing it only produces a
-# deterministic startup error.  Also keep the DFE install option self-contained
-# so the UI never emits an unresolved-string error.
+# deterministic startup error. The install page must use OrangeFox's existing
+# localized forced-encryption label instead of the private/missing auto_dfe_chk.
 if any(line.lstrip().startswith("mi_ext ") for line in recovery_fstab.splitlines()):
     errors.append("stale Xiaomi mi_ext entries remain in recovery.fstab")
-if '{@auto_dfe_chk=Disable forced encryption}' not in install_xml:
-    errors.append("install.xml auto_dfe_chk is missing its safe fallback label")
+if "auto_dfe_chk" in install_xml:
+    errors.append("install.xml still references missing auto_dfe_chk string")
+if "{@fox_forced_encryption_chk}" not in install_xml:
+    errors.append("install.xml does not use OrangeFox fox_forced_encryption_chk resource")
 
 # AOSP/OrangeFox envsetup is intentionally interactive-shell oriented: it is
 # not nounset-safe and can return 1 from a harmless final optional probe. CI and
@@ -410,7 +414,7 @@ print("  recovery partition: 100 MiB")
 print("  header: v4")
 print("  ramdisk: LZ4")
 print("  embedded kernel: excluded")
-print("  haptics: native Nubia/Awinic continuous mode, persistent input-FF fallback")
+print("  haptics: hardware-verified Awinic FF_RUMBLE, persistent input-FF backend")
 print("  source profile: OrangeFox fox_14.1 / Android 14 / SDK 34")
 print("  CI memory: 16 GiB total active swap target + 60 s heartbeat; preserves existing runner swap; no post-build swapoff")
 print("  GitHub JS actions: checkout@v6 + upload-artifact@v6 / Node.js 24")

@@ -2,35 +2,38 @@
 
 ## Symptoms addressed
 
-The original recovery had a roughly five-second delay after every tap because
-OrangeFox could synchronously wait for a Xiaomi-specific vibrator Binder service
-that does not exist on Tiro.
+The original recovery could pause for several seconds after taps because a
+Xiaomi-specific vibrator Binder service was queried synchronously even though
+that service is not Tiro's native haptics path. A later Tiro patch removed the
+delay but incorrectly preferred `FF_CONSTANT`, and recovery stopped physically
+vibrating even though the input device still accepted the ioctl.
 
-After moving to direct input force-feedback the five-second delay disappeared,
-but device testing showed a second issue: vibration could be missing on some
-UI taps and could feel different after a recovery-to-recovery reboot.
+## Verified Tiro hardware path
 
-## Tiro hardware path
-
-The Red Magic kernel loads Nubia's `haptic.ko` (`drivers/misc/haptic_hv`) and
-registers the input device `awinic_haptic`. Runtime logs identify the active
-implementation as the AW8692x path.
-
-That driver requests:
+The Red Magic kernel loads Nubia's `haptic_hv` driver and registers the input
+device `awinic_haptic`. Runtime probing on the phone reports these Force
+Feedback capabilities:
 
 ```text
-haptic_ram.bin
+FF_RUMBLE
+FF_PERIODIC
+FF_CONSTANT
+FF_CUSTOM
+FF_GAIN
 ```
 
-about eight seconds after initialization. The known-good recovery ramdisk does
-not contain that Tiro firmware, so the request fails. Input `FF_CONSTANT` is
-still accepted by the driver, but its implementation switches to
-`AW_RAM_LOOP_MODE`; therefore it is not the best primary recovery feedback path
-when RAM waveforms were never initialized.
+A direct root-terminal evdev test uploaded an `FF_RUMBLE` effect to the live
+`awinic_haptic` event node, played it, and produced physical vibration. This is
+the hardware-verified recovery path.
 
-The old Xiaomi `si_haptic.ko`, `xiaomi_touch.ko`, and `nt38771_touch.ko` files
-are not restored. They were built for a different kernel and logged
-`module_layout`/`Exec format error` on Tiro.
+The driver also requests `haptic_ram.bin`, which is absent from the recovery
+firmware search paths. That request fails repeatedly. `FF_RUMBLE` still works
+without that blob, so short recovery UI feedback does not need a guessed or
+renamed waveform firmware.
+
+The device does **not** expose a writable runtime
+`/sys/class/timed_output/vibrator/cont` node. The `aw8692x_cont_*` files visible
+under `of_node` are Device Tree properties, not runtime haptics controls.
 
 ## Stable recovery solution
 
@@ -38,34 +41,30 @@ are not restored. They were built for a different kernel and logged
 
 ```text
 UI tap
-  -> /sys/class/timed_output/vibrator/cont   (native Nubia continuous mode)
-     -> POSIX timer stops it after timeout; GUI thread never sleeps
-  -> persistent /dev/input/eventX FF effect  (secondary fallback)
-  -> generic OrangeFox sysfs vibrator paths  (last fallback)
+  -> persistent awinic_haptic evdev effect
+       -> FF_RUMBLE first (verified on Tiro)
+       -> FF_CONSTANT only if a different kernel lacks FF_RUMBLE
+  -> generic OrangeFox sysfs vibrator paths
 ```
 
-Nubia's `cont` sysfs handler calls the chip's continuous-mode configuration
-directly and does not check `ram_init`, so it does not depend on
-`haptic_ram.bin`. This makes it suitable for short recovery UI feedback.
+One FF slot is retained and updated. Before a repeated tap, an in-flight effect
+is stopped and then retriggered, avoiding repeated allocation/deallocation and
+giving deterministic feedback for fast UI input.
 
-The input-FF fallback also keeps the driver's single FF slot and updates it on
-subsequent taps instead of deleting/recreating an effect every time.
-
-The Xiaomi AIDL safety fix remains: any accidental AIDL path uses the
-non-blocking `AServiceManager_checkService()` lookup rather than
+The Xiaomi AIDL safety fix remains: an accidental AIDL path uses the
+non-blocking `AServiceManager_checkService()` lookup instead of
 `AServiceManager_getService()`.
 
 ## Why no fake `haptic_ram.bin`
 
-The ramdisk contains Xiaomi-derived `aw8697_haptic.bin`, but Tiro is using the
-AW8692x implementation. Although the file format has a compatible checksum
-header, that is not proof that its waveform table is correct for the Tiro
-actuator. The project deliberately does **not** rename or copy that blob to
-`haptic_ram.bin`.
+The ramdisk contains Xiaomi-derived `aw8697_haptic.bin`, while the active Tiro
+implementation is AW8692x. A compatible-looking header is not proof that its
+waveforms are correct for this actuator. The project therefore does not rename
+or copy that file to `haptic_ram.bin`.
 
-A genuine stock Tiro `haptic_ram.bin` can be added later if extracted from the
-phone/vendor firmware and verified. The recovery UI haptics no longer depend on
-it.
+A genuine Tiro `haptic_ram.bin` may be added later only if it is extracted from
+matching Nubia firmware and verified. Recovery UI vibration already works via
+`FF_RUMBLE` without it.
 
 ## Diagnostics
 
@@ -75,18 +74,12 @@ From recovery ADB shell:
 /system/bin/tiro-haptics-debug.sh
 ```
 
-For a deliberate 50 ms continuous-mode hardware test:
-
-```bash
-/system/bin/tiro-haptics-debug.sh --test
-```
-
-Useful log markers after the fix:
+Expected recovery log markers are:
 
 ```text
-TIRO: using firmware-independent Awinic continuous haptics
+Using input FF haptics device 'awinic_haptic' ... (effect=FF_RUMBLE)
+TIRO: active recovery haptics backend is input FF_RUMBLE
 ```
 
-The existing `haptic_ram.bin` load errors may remain until the genuine Nubia
-firmware is supplied; they should no longer determine whether recovery button
-feedback works.
+`haptic_ram.bin` load errors can remain until genuine Nubia firmware is
+supplied; they are not required for the verified `FF_RUMBLE` feedback path.

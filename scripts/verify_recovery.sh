@@ -31,15 +31,19 @@ if [[ -n "$PRODUCT_OUT" ]]; then
       echo "ERROR: Xiaomi AIDL vibrator instance is still compiled into libminuitwrp.so" >&2
       exit 1
     fi
-    if ! grep -aFq '/sys/class/timed_output/vibrator/cont' "$LIB"; then
-      echo "ERROR: native Tiro/Awinic continuous haptics backend missing from libminuitwrp.so" >&2
+    if grep -aFq '/sys/class/timed_output/vibrator/cont' "$LIB"; then
+      echo "ERROR: stale nonexistent Tiro timed_output/cont haptics backend remains" >&2
       exit 1
     fi
-    if ! grep -aFq 'TIRO: using firmware-independent Awinic continuous haptics' "$LIB"; then
-      echo "ERROR: Tiro continuous haptics marker missing from libminuitwrp.so" >&2
+    if ! grep -aFq 'FF_RUMBLE' "$LIB"; then
+      echo "ERROR: FF_RUMBLE support missing from libminuitwrp.so" >&2
       exit 1
     fi
-    echo "Haptics check: native Awinic continuous backend present; Xiaomi blocking AIDL path absent"
+    if ! grep -aFq 'TIRO: active recovery haptics backend is input' "$LIB"; then
+      echo "ERROR: Tiro input-FF haptics marker missing from libminuitwrp.so" >&2
+      exit 1
+    fi
+    echo "Haptics check: hardware-verified FF_RUMBLE backend present; stale cont/AIDL paths absent"
   else
     echo "WARNING: libminuitwrp.so was not found for binary inspection" >&2
   fi
@@ -199,7 +203,8 @@ PY_UEVENTD
     echo "ERROR: stale Xiaomi mi_ext mapping survived into built ramdisk" >&2
     exit 1
   fi
-  grep -Fq '{@auto_dfe_chk=Disable forced encryption}' "$INSTALL_XML" || { echo "ERROR: auto_dfe_chk fallback label missing" >&2; exit 1; }
+  ! grep -Fq 'auto_dfe_chk' "$INSTALL_XML" || { echo "ERROR: missing auto_dfe_chk resource is still referenced" >&2; exit 1; }
+  grep -Fq '{@fox_forced_encryption_chk}' "$INSTALL_XML" || { echo "ERROR: OrangeFox forced-encryption label is not used" >&2; exit 1; }
   echo "Runtime cleanup check: USB sequencing, ueventd, mi_ext and DFE label are clean"
 
   # Minimal recovery-only cleanup: verify only the paths proven broken on Tiro.

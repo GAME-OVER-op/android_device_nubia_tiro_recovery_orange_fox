@@ -58,8 +58,9 @@ The on-device log showed `Exec format error` for:
 - `xiaomi_touch.ko`
 
 They are no longer loaded or bundled. The working Red Magic paths remain:
-Goodix/input for touch and the native Nubia/Awinic continuous-mode sysfs path
-for primary haptics, with `awinic_haptic` input force-feedback as fallback.
+Goodix/input for touch and the native `awinic_haptic` evdev force-feedback
+interface for haptics. On-device testing confirms `FF_RUMBLE` is the working
+primary effect; `FF_CONSTANT` is retained only as a compatibility fallback.
 
 No KeyMint, Gatekeeper, QSEE, FBE/decryption, App Manager or Root Module Manager
 components were changed by this cleanup.
@@ -126,6 +127,7 @@ configuration. Static and built-image verification now reject malformed Tiro
 
 The Xiaomi-only `mi_ext` entries were removed from `recovery.fstab`; NX769J has
 no such logical partition and OrangeFox was probing it twice on every boot. The
-install-page `auto_dfe_chk` reference now carries a readable fallback label so
-missing upstream language resources cannot produce an unresolved-string error.
+install page now uses OrangeFox's existing localized
+`fox_forced_encryption_chk` resource instead of the private missing
+`auto_dfe_chk` key, eliminating that unresolved-string error.
 

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Host-side regression test for the Red Magic haptics patch.
 
-This test validates both the textual OrangeFox 14.1 patch anchors and the exact
-Tiro native-continuous/input-force-feedback helper C++ injected by
-patch_haptics.py. It performs no hardware I/O; both backends are called with a
-zero duration so they return before touching haptics hardware.
+This validates the OrangeFox 14.1 patch anchors and the exact Tiro persistent
+input-force-feedback helper injected by patch_haptics.py. It performs no hardware
+I/O: the helper is called with a zero duration so it returns before opening an
+input device.
 """
 from __future__ import annotations
 
@@ -77,13 +77,12 @@ def compile_helper(tmp: Path) -> None:
         #include <sys/ioctl.h>
         #include <sys/types.h>
         #include <unistd.h>
-        #define LOGI(...) do { } while (0)
+        #define LOGI(...) do { if (false) fprintf(stderr, __VA_ARGS__); } while (0)
         '''
     ) + mod.HELPERS + r'''
 int main() {
-    // Zero duration guarantees neither backend touches host haptics hardware.
-    if (tiro_vibrate_awinic_cont(0)) return 1;
-    if (tiro_vibrate_input_ff(0)) return 2;
+    // Zero duration guarantees the backend does not touch host haptics hardware.
+    if (tiro_vibrate_input_ff(0)) return 1;
     return 0;
 }
 '''
@@ -107,10 +106,12 @@ def main() -> int:
         assert mod.MARKER in patched
         assert "AServiceManager_getService(kVibratorInstance.c_str())" not in patched
         assert "AServiceManager_checkService(kVibratorInstance.c_str())" in patched
-        assert "tiro_vibrate_awinic_cont(timeout_ms)" in patched
+        assert "tiro_vibrate_awinic_cont" not in patched
         assert "tiro_vibrate_input_ff(timeout_ms)" in patched
-        assert patched.index("tiro_vibrate_awinic_cont(timeout_ms)") < patched.index("tiro_vibrate_input_ff(timeout_ms)")
+        assert "tiro_ff_test_bit(FF_RUMBLE, ff_bits)" in patched
+        assert patched.index("tiro_ff_test_bit(FF_RUMBLE, ff_bits)") < patched.index("tiro_ff_test_bit(FF_CONSTANT, ff_bits)")
         assert "effect.id = static_cast<__s16>(tiro_ff_effect_id);" in patched
+        assert "tiro_stop_ff_effect(fd);" in patched
         compile_helper(tmp)
 
     print("Haptics patch regression test OK")

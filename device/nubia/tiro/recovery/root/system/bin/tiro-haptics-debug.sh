@@ -1,9 +1,5 @@
 #!/system/bin/sh
 
-CONT=/sys/class/timed_output/vibrator/cont
-RAM_NUM=/sys/class/timed_output/vibrator/ram_num
-RAM_UPDATE=/sys/class/timed_output/vibrator/ram_update
-
 printf '%s\n' '=== Red Magic recovery haptics probe ==='
 for node in /dev/input/event*; do
     [ -e "$node" ] || continue
@@ -11,20 +7,25 @@ for node in /dev/input/event*; do
     case "$name" in
         *haptic*|*Haptic*|*vibra*|*Vibra*|*awinic*|*Awinic*|*aw869*)
             echo "$node : $name"
-            getevent -il "$node" 2>/dev/null | sed -n '1,40p'
+            getevent -il "$node" 2>/dev/null | sed -n '1,50p'
             ;;
     esac
 done
 
 echo
-echo 'Native Nubia/Awinic sysfs:'
-for f in "$CONT" "$RAM_NUM" "$RAM_UPDATE"; do
-    if [ -e "$f" ]; then
-        echo "$f : present"
-        [ -r "$f" ] && { printf '  value: '; cat "$f" 2>/dev/null || true; }
-    else
-        echo "$f : missing"
-    fi
+echo 'Expected Tiro backend:'
+echo '  awinic_haptic via evdev Force Feedback'
+echo '  preferred effect: FF_RUMBLE'
+echo '  compatibility fallback: FF_CONSTANT'
+
+echo
+echo 'Legacy sysfs paths (diagnostic only):'
+for f in \
+    /sys/class/timed_output/vibrator/cont \
+    /sys/class/timed_output/vibrator/enable \
+    /sys/class/leds/vibrator/duration \
+    /sys/class/leds/vibrator/activate; do
+    [ -e "$f" ] && echo "$f : present" || echo "$f : missing"
 done
 
 echo
@@ -47,14 +48,6 @@ service list 2>/dev/null | grep -i vibrator || true
 
 if [ "${1:-}" = "--test" ]; then
     echo
-    echo 'Continuous-mode test:'
-    if [ -w "$CONT" ]; then
-        echo 1 > "$CONT"
-        sleep 0.05
-        echo 0 > "$CONT"
-        echo 'Triggered 50 ms via native cont node.'
-    else
-        echo 'Native cont node is not writable.'
-        exit 1
-    fi
+    echo 'No shell sysfs test is used on Tiro: the driver exposes evdev FF, not a writable timed_output/cont node.'
+    echo 'Use an evdev FF_RUMBLE tester against the awinic_haptic event node.'
 fi

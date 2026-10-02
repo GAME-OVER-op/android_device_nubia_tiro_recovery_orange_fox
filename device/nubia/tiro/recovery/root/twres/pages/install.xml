@@ -76,7 +76,7 @@
 					<condition var1="tw_has_injecttwrp" var2="1"/>
 					<data variable="tw_inject_after_zip"/>
 				</listitem>
-				<listitem name="{@auto_dfe_chk=Disable forced encryption}">
+				<listitem name="{@fox_forced_encryption_chk}">
 					<condition var1="fileexists" var2="/FFiles/DFE.zip"/>
 					<data variable="tw_auto_dfe"/>
 				</listitem>
